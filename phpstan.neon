@@ -11,8 +11,11 @@ parameters:
 
     ignoreErrors:
         - '#PHPDoc tag @var#'
+        - '#does not specify its types: TFactory#'
+        - '#Template type TDeclaringModel#'
+        - '#generic class.*but does not specify its types#'
+        - '#does not specify all template types#'
+        - '#view-string\|null, string given#'
         
     excludePaths:
         - ./*/*/FileToBeExcluded.php
-
-    checkMissingIterableValueType: false

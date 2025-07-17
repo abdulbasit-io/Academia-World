@@ -35,6 +35,7 @@ class User extends Authenticatable
         'account_status',
         'preferences',
         'last_login_at',
+        'is_admin',
     ];
 
     /**
@@ -60,6 +61,7 @@ class User extends Authenticatable
             'social_links' => 'array',
             'preferences' => 'array',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -68,7 +70,7 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->email === env('ADMIN_EMAIL') || $this->account_status === 'admin';
+        return $this->is_admin || $this->account_status === 'admin';
     }
 
     /**
@@ -89,16 +91,18 @@ class User extends Authenticatable
 
     /**
      * Events hosted by this user
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Event>
      */
-    public function hostedEvents()
+    public function hostedEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Event::class, 'host_id');
     }
 
     /**
      * Events user has registered for
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Event>
      */
-    public function registeredEvents()
+    public function registeredEvents(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Event::class, 'event_registrations')
                     ->withPivot('status', 'registered_at')

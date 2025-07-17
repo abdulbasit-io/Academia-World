@@ -179,7 +179,7 @@ class EventController extends Controller
         }
 
         try {
-            $data = $request->validated();
+            $data = $validator->validated();
             $data['host_id'] = Auth::id();
             $data['status'] = 'published'; // Auto-publish!
             $data['timezone'] = $data['timezone'] ?? 'UTC';
@@ -314,7 +314,9 @@ class EventController extends Controller
      */
     public function update(Request $request, Event $event): JsonResponse
     {
-        if (!$event->canBeEditedBy(Auth::user())) {
+        $user = Auth::user();
+        
+        if (!$user || !$event->canBeEditedBy($user)) {
             return response()->json([
                 'message' => 'Unauthorized to edit this event'
             ], 403);
@@ -406,7 +408,9 @@ class EventController extends Controller
      */
     public function destroy(Event $event): JsonResponse
     {
-        if (!$event->canBeEditedBy(Auth::user())) {
+        $user = Auth::user();
+        
+        if (!$user || !$event->canBeEditedBy($user)) {
             return response()->json([
                 'message' => 'Unauthorized to delete this event'
             ], 403);
@@ -657,6 +661,14 @@ class EventController extends Controller
     public function myRegistrations(Request $request): JsonResponse
     {
         $user = Auth::user();
+        
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        
         $events = $user->registeredEvents()
             ->wherePivot('status', 'registered')
             ->with(['host:id,first_name,last_name,institution'])
@@ -712,7 +724,9 @@ class EventController extends Controller
      */
     public function attendees(Event $event): JsonResponse
     {
-        if (!$event->canBeEditedBy(Auth::user())) {
+        $user = Auth::user();
+        
+        if (!$user || !$event->canBeEditedBy($user)) {
             return response()->json([
                 'message' => 'Unauthorized to view attendees'
             ], 403);
@@ -720,7 +734,7 @@ class EventController extends Controller
 
         $attendees = $event->registrations()
             ->wherePivot('status', 'registered')
-            ->with(['user:id,first_name,last_name,email,institution,position'])
+            ->select(['id', 'first_name', 'last_name', 'email', 'institution', 'position'])
             ->get();
 
         return response()->json([

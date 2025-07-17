@@ -63,6 +63,13 @@ class UserController extends Controller
         try {
             $user = $request->user();
             
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+            
             Log::info('User profile retrieved', [
                 'user_id' => $user->id,
                 'email' => $user->email
@@ -181,6 +188,14 @@ class UserController extends Controller
 
         try {
             $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+            
             $updateData = $request->only([
                 'first_name', 'last_name', 'institution', 'department', 
                 'position', 'bio', 'website', 'phone', 'social_links'
@@ -272,6 +287,13 @@ class UserController extends Controller
 
         try {
             $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
 
             // Delete old avatar if exists
             if ($user->avatar) {
@@ -347,6 +369,13 @@ class UserController extends Controller
     {
         try {
             $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
 
             if (!$user->avatar) {
                 return response()->json([
@@ -416,6 +445,13 @@ class UserController extends Controller
     {
         try {
             $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
 
             $hostedEvents = $user->hostedEvents();
             $registeredEvents = $user->registeredEvents()->wherePivot('status', 'registered');
@@ -477,6 +513,6 @@ class UserController extends Controller
             }
         }
 
-        return round(($completed / $total) * 100);
+        return (int) round(($completed / $total) * 100);
     }
 }

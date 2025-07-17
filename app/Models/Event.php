@@ -6,9 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * @template TFactory of \Illuminate\Database\Eloquent\Factories\Factory
+ */
 class Event extends Model
 {
+    /** @use HasFactory<TFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -28,16 +33,25 @@ class Event extends Model
         'tags' => 'array',
     ];
 
+    /**
+     * @return BelongsTo<User, Event>
+     */
     public function host(): BelongsTo
     {
         return $this->belongsTo(User::class, 'host_id');
     }
 
+    /**
+     * @return BelongsTo<User, Event>
+     */
     public function moderatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'moderated_by');
     }
 
+    /**
+     * @return BelongsToMany<User, \Illuminate\Database\Eloquent\Relations\Pivot>
+     */
     public function registrations(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'event_registrations')
@@ -46,27 +60,47 @@ class Event extends Model
     }
 
     // Scopes
-    public function scopePublished($query)
+    /**
+     * @param Builder<Event> $query
+     * @return Builder<Event>
+     */
+    public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'published');
     }
 
-    public function scopeActive($query)
+    /**
+     * @param Builder<Event> $query
+     * @return Builder<Event>
+     */
+    public function scopeActive(Builder $query): Builder
     {
         return $query->whereIn('status', ['published', 'completed']);
     }
 
-    public function scopeBanned($query)
+    /**
+     * @param Builder<Event> $query
+     * @return Builder<Event>
+     */
+    public function scopeBanned(Builder $query): Builder
     {
         return $query->where('status', 'banned');
     }
 
-    public function scopePublic($query)
+    /**
+     * @param Builder<Event> $query
+     * @return Builder<Event>
+     */
+    public function scopePublic(Builder $query): Builder
     {
         return $query->where('visibility', 'public');
     }
 
-    public function scopeUpcoming($query)
+    /**
+     * @param Builder<Event> $query
+     * @return Builder<Event>
+     */
+    public function scopeUpcoming(Builder $query): Builder
     {
         return $query->where('start_date', '>', now());
     }

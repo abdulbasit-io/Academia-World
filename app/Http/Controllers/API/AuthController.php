@@ -71,6 +71,7 @@ class AuthController extends Controller
      *     @OA\Response(response=500, description="Registration failed")
      * )
      */
+
     /**
      * Register a new user
      */
@@ -225,6 +226,13 @@ class AuthController extends Controller
     {
         $user = $request->user();
         
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -264,7 +272,16 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->tokens()->delete();
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        
+        $user->tokens()->delete();
 
         return response()->json([
             'message' => 'Logged out successfully'
