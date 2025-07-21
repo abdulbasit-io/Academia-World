@@ -215,4 +215,12 @@ class Event extends Model
     {
         return $this->status === 'banned';
     }
+
+    /**
+     * Get forums for this event
+     */
+    public function forums(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DiscussionForum::class);
+    }
 }

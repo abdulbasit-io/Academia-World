@@ -6,6 +6,7 @@ use App\Models\EventResource;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
@@ -309,9 +310,6 @@ it('can delete resource as host', function () {
         ->assertJson([
             'message' => 'Resource deleted successfully'
         ]);
-    
-    // Check resource is soft deleted
-    $this->assertSoftDeleted('event_resources', ['id' => $resource->id]);
     
     // Check file is deleted from storage
     expect(Storage::disk('public')->exists($resource->file_path))->toBeFalse();

@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -28,6 +30,9 @@ use Illuminate\Support\Str;
  * @property array<string, mixed>|null $preferences
  * @property \Illuminate\Support\Carbon|null $last_login_at
  * @property bool $is_admin
+ * @property bool $is_banned
+ * @property string|null $ban_reason
+ * @property \Illuminate\Support\Carbon|null $banned_at
  * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -61,6 +66,9 @@ class User extends Authenticatable
         'preferences',
         'last_login_at',
         'is_admin',
+        'is_banned',
+        'ban_reason',
+        'banned_at',
     ];
 
     /**
@@ -83,10 +91,12 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'banned_at' => 'datetime',
             'social_links' => 'array',
             'preferences' => 'array',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_banned' => 'boolean',
         ];
     }
 
@@ -188,6 +198,106 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Event::class, 'event_registrations')
                     ->withPivot('status', 'registered_at')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Forum posts created by user
+     */
+    public function forumPosts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ForumPost::class);
+    }
+
+    /**
+     * Posts liked by user
+     */
+    public function likedPosts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(ForumPost::class, 'post_likes', 'user_id', 'post_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Connection requests sent by user
+     */
+    public function sentConnectionRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(UserConnection::class, 'requester_id');
+    }
+
+    /**
+     * Connection requests received by user
+     */
+    public function receivedConnectionRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(UserConnection::class, 'addressee_id');
+    }
+
+    /**
+     * Get user's connections (accepted only)
+     */
+    public function connections(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_connections', 'requester_id', 'addressee_id')
+                    ->wherePivot('status', 'accepted')
+                    ->withPivot('status', 'responded_at')
+                    ->withTimestamps()
+                    ->union(
+                        $this->belongsToMany(User::class, 'user_connections', 'addressee_id', 'requester_id')
+                             ->wherePivot('status', 'accepted')
+                             ->withPivot('status', 'responded_at')
+                             ->withTimestamps()
+                    );
+    }
+
+    /**
+     * Check if user is connected to another user
+     */
+    public function isConnectedTo(User $user): bool
+    {
+        return UserConnection::where(function ($query) use ($user) {
+            $query->where('requester_id', $this->id)
+                  ->where('addressee_id', $user->id);
+        })->orWhere(function ($query) use ($user) {
+            $query->where('requester_id', $user->id)
+                  ->where('addressee_id', $this->id);
+        })->where('status', 'accepted')->exists();
+    }
+
+    /**
+     * Get connection status with another user
+     */
+    public function getConnectionStatusWith(User $user): ?string
+    {
+        $connection = UserConnection::where(function ($query) use ($user) {
+            $query->where('requester_id', $this->id)
+                  ->where('addressee_id', $user->id);
+        })->orWhere(function ($query) use ($user) {
+            $query->where('requester_id', $user->id)
+                  ->where('addressee_id', $this->id);
+        })->first();
+
+        return $connection?->status;
+    }
+
+    /**
+     * Send connection request to another user
+     */
+    public function sendConnectionRequest(User $user, ?string $message = null): UserConnection
+    {
+        return UserConnection::create([
+            'requester_id' => $this->id,
+            'addressee_id' => $user->id,
+            'status' => 'pending',
+            'message' => $message,
+        ]);
+    }
+
+    public function registrations(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'event_registrations')
+                    ->withPivot('uuid', 'status', 'registered_at', 'notes')
                     ->withTimestamps();
     }
 }

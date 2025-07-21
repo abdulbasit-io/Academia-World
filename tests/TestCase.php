@@ -16,6 +16,10 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         
+        // Ensure we're using MySQL for tests
+        $this->app['config']->set('database.default', 'mysql');
+        $this->app['config']->set('database.connections.mysql.database', 'academia_world_test');
+        
         // Refresh database for each test
         $this->artisan('migrate:fresh');
         

@@ -12,7 +12,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE events MODIFY COLUMN status ENUM('draft', 'pending_approval', 'published', 'cancelled', 'completed', 'banned') DEFAULT 'draft'");
+        Schema::table('events', function (Blueprint $table) {
+            // Drop indexes that depend on status column
+            $table->dropIndex(['start_date', 'status']);
+            $table->dropIndex(['status', 'visibility']);
+            $table->dropIndex(['host_id', 'status']);
+            
+            // Drop the status column
+            $table->dropColumn('status');
+            
+            // Add the new status column with 'banned' option
+            $table->enum('status', ['draft', 'pending_approval', 'published', 'cancelled', 'completed', 'banned'])
+                  ->default('draft')
+                  ->after('registration_deadline');
+            
+            // Recreate indexes
+            $table->index(['start_date', 'status']);
+            $table->index(['status', 'visibility']);
+            $table->index(['host_id', 'status']);
+        });
     }
 
     /**
@@ -23,7 +41,24 @@ return new class extends Migration
         // First update any banned events to cancelled
         DB::table('events')->where('status', 'banned')->update(['status' => 'cancelled']);
         
-        // Then remove banned from enum
-        DB::statement("ALTER TABLE events MODIFY COLUMN status ENUM('draft', 'pending_approval', 'published', 'cancelled', 'completed') DEFAULT 'draft'");
+        Schema::table('events', function (Blueprint $table) {
+            // Drop indexes that depend on status column
+            $table->dropIndex(['start_date', 'status']);
+            $table->dropIndex(['status', 'visibility']);
+            $table->dropIndex(['host_id', 'status']);
+            
+            // Drop the status column
+            $table->dropColumn('status');
+            
+            // Add the status column without 'banned'
+            $table->enum('status', ['draft', 'pending_approval', 'published', 'cancelled', 'completed'])
+                  ->default('draft')
+                  ->after('registration_deadline');
+            
+            // Recreate indexes
+            $table->index(['start_date', 'status']);
+            $table->index(['status', 'visibility']);
+            $table->index(['host_id', 'status']);
+        });
     }
 };

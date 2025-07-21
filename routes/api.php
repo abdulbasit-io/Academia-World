@@ -66,10 +66,50 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('resources/{resource}', [ResourceController::class, 'update']);
     Route::delete('resources/{resource}', [ResourceController::class, 'destroy']);
     
-    // Admin moderation routes
-    Route::middleware('admin')->group(function () {
-        Route::post('admin/events/{event}/ban', [EventController::class, 'banEvent']);
-        Route::post('admin/events/{event}/unban', [EventController::class, 'unbanEvent']);
-        Route::delete('admin/events/{event}/force-delete', [EventController::class, 'forceDelete']);
+    // Community features - Discussion Forums
+    Route::get('events/{event}/forums', [\App\Http\Controllers\Api\V1\ForumController::class, 'index']);
+    Route::post('events/{event}/forums', [\App\Http\Controllers\Api\V1\ForumController::class, 'store']);
+    Route::get('forums/{forum}', [\App\Http\Controllers\Api\V1\ForumController::class, 'show']);
+    Route::put('forums/{forum}', [\App\Http\Controllers\Api\V1\ForumController::class, 'update']);
+    Route::delete('forums/{forum}', [\App\Http\Controllers\Api\V1\ForumController::class, 'destroy']);
+    
+    // Forum Posts
+    Route::get('forums/{forum}/posts', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'index']);
+    Route::post('forums/{forum}/posts', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'store']);
+    Route::get('posts/{post}', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'show']);
+    Route::put('posts/{post}', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'update']);
+    Route::delete('posts/{post}', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'destroy']);
+    Route::post('posts/{post}/like', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'toggleLike']);
+    Route::post('posts/{post}/pin', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'togglePin']);
+    Route::post('posts/{post}/solution', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'markAsSolution']);
+    
+    // User Connections/Networking
+    Route::get('connections', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'index']);
+    Route::get('connections/pending', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'pending']);
+    Route::post('connections', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'store']);
+    Route::put('connections/{connection}/respond', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'respond']);
+    Route::delete('connections/{connection}', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'destroy']);
+    Route::get('users/search', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'searchUsers']);
+    
+    // Admin routes
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        // Admin Dashboard & Analytics
+        Route::get('dashboard', [\App\Http\Controllers\Api\V1\AdminController::class, 'dashboard']);
+        Route::get('analytics', [\App\Http\Controllers\Api\V1\AdminController::class, 'analytics']);
+        Route::get('platform-health', [\App\Http\Controllers\Api\V1\AdminController::class, 'platformHealth']);
+        Route::get('logs', [\App\Http\Controllers\Api\V1\AdminController::class, 'adminLogs']);
+        
+        // User Management
+        Route::get('users', [\App\Http\Controllers\Api\V1\AdminController::class, 'users']);
+        Route::post('users/{user}/toggle-ban', [\App\Http\Controllers\Api\V1\AdminController::class, 'toggleUserBan']);
+        
+        // Event Management
+        Route::get('events', [\App\Http\Controllers\Api\V1\AdminController::class, 'events']);
+        Route::put('events/{event}/status', [\App\Http\Controllers\Api\V1\AdminController::class, 'updateEventStatus']);
+        Route::delete('events/{event}', [\App\Http\Controllers\Api\V1\AdminController::class, 'deleteEvent']);
+        
+        // Content Moderation
+        Route::get('forum-posts', [\App\Http\Controllers\Api\V1\AdminController::class, 'forumPosts']);
+        Route::delete('forum-posts/{post}', [\App\Http\Controllers\Api\V1\AdminController::class, 'deleteForumPost']);
     });
 });
