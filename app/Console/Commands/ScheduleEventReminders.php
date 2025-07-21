@@ -87,6 +87,6 @@ class ScheduleEventReminders extends Command
             'events_1h' => $events1h->count()
         ]);
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 }
