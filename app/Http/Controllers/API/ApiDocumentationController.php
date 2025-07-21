@@ -99,6 +99,28 @@ use App\Http\Controllers\Controller;
  *     @OA\Property(property="message", type="string"),
  *     @OA\Property(property="errors", type="object", nullable=true)
  * )
+ *
+ * @OA\Schema(
+ *     schema="EventResource",
+ *     type="object",
+ *     @OA\Property(property="uuid", type="string", format="uuid"),
+ *     @OA\Property(property="title", type="string"),
+ *     @OA\Property(property="description", type="string", nullable=true),
+ *     @OA\Property(property="original_filename", type="string"),
+ *     @OA\Property(property="file_type", type="string"),
+ *     @OA\Property(property="file_size", type="integer"),
+ *     @OA\Property(property="file_size_formatted", type="string"),
+ *     @OA\Property(property="resource_type", type="string", enum={"presentation", "paper", "recording", "agenda", "other"}),
+ *     @OA\Property(property="is_public", type="boolean"),
+ *     @OA\Property(property="is_downloadable", type="boolean"),
+ *     @OA\Property(property="requires_registration", type="boolean"),
+ *     @OA\Property(property="download_count", type="integer"),
+ *     @OA\Property(property="view_count", type="integer"),
+ *     @OA\Property(property="event", ref="#/components/schemas/Event", nullable=true),
+ *     @OA\Property(property="uploaded_by", ref="#/components/schemas/User", nullable=true),
+ *     @OA\Property(property="created_at", type="string", format="date-time"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time")
+ * )
  */
 class ApiDocumentationController extends Controller
 {

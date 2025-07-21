@@ -78,7 +78,7 @@ class UserController extends Controller
             return response()->json([
                 'message' => 'Profile retrieved successfully',
                 'data' => [
-                    'id' => $user->id,
+                    'uuid' => $user->uuid,
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
                     'full_name' => $user->full_name,
@@ -170,6 +170,7 @@ class UserController extends Controller
             'social_links' => 'sometimes|nullable|array',
             'social_links.twitter' => 'sometimes|nullable|url',
             'social_links.linkedin' => 'sometimes|nullable|url',
+            'social_links.github' => 'sometimes|nullable|url',
             'social_links.orcid' => 'sometimes|nullable|url',
             'social_links.researchgate' => 'sometimes|nullable|url',
         ]);
@@ -453,13 +454,13 @@ class UserController extends Controller
                 ], 401);
             }
 
-            $hostedEvents = $user->hostedEvents();
+                        // Get registered events for the user
             $registeredEvents = $user->registeredEvents()->wherePivot('status', 'registered');
 
             $stats = [
-                'hosted_events_total' => $hostedEvents->count(),
-                'hosted_events_upcoming' => $hostedEvents->where('start_date', '>', now())->count(),
-                'hosted_events_completed' => $hostedEvents->where('status', 'completed')->count(),
+                'hosted_events_total' => $user->hostedEvents()->count(),
+                'hosted_events_upcoming' => $user->hostedEvents()->where('start_date', '>', now())->count(),
+                'hosted_events_completed' => $user->hostedEvents()->where('status', 'completed')->count(),
                 'registered_events_total' => $registeredEvents->count(),
                 'registered_events_upcoming' => $registeredEvents->where('start_date', '>', now())->count(),
                 'total_attendees_hosted' => $user->hostedEvents()

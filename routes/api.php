@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\EventController;
 use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\ResourceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,9 +29,14 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/resend-verification', [AuthController::class, 'resendVerification']);
     
     // Public events (no auth required)
+    Route::get('events/search', [EventController::class, 'search']);
     Route::get('events', [EventController::class, 'index']);
     Route::get('events/{event}', [EventController::class, 'show']);
-    Route::get('events/search', [EventController::class, 'search']);
+    
+    // Public resource access (some resources may be public)
+    Route::get('events/{event}/resources', [ResourceController::class, 'index']);
+    Route::get('resources/{resource}', [ResourceController::class, 'show']);
+    Route::get('resources/{resource}/download', [ResourceController::class, 'download']);
 });
 
 // Protected routes
@@ -54,6 +60,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('events/{event}/attendees', [EventController::class, 'attendees']);
     Route::get('my-events', [EventController::class, 'myEvents']);
     Route::get('my-registrations', [EventController::class, 'myRegistrations']);
+    
+    // Resource management routes (protected)
+    Route::post('events/{event}/resources', [ResourceController::class, 'store']);
+    Route::put('resources/{resource}', [ResourceController::class, 'update']);
+    Route::delete('resources/{resource}', [ResourceController::class, 'destroy']);
     
     // Admin moderation routes
     Route::middleware('admin')->group(function () {

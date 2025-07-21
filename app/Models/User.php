@@ -7,7 +7,31 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Str;
 
+/**
+ * @property string $uuid
+ * @property string $name
+ * @property string $first_name
+ * @property string $last_name
+ * @property string $email
+ * @property string $password
+ * @property string|null $avatar
+ * @property string|null $bio
+ * @property string $institution
+ * @property string|null $department
+ * @property string|null $position
+ * @property string|null $website
+ * @property string|null $phone
+ * @property array<string, mixed>|null $social_links
+ * @property string $account_status
+ * @property array<string, mixed>|null $preferences
+ * @property \Illuminate\Support\Carbon|null $last_login_at
+ * @property bool $is_admin
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -19,6 +43,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'uuid',
         'name',
         'first_name',
         'last_name',
@@ -65,6 +90,17 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = Str::uuid()->toString();
+            }
+        });
+    }
+
     /**
      * Check if user is admin
      */
@@ -82,6 +118,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Mark email as verified and activate account
+     */
+    public function markEmailAsVerified(): void
+    {
+        $this->email_verified_at = now();
+        $this->account_status = 'active';
+        $this->save();
+    }
+
+    /**
      * Get user's full name
      */
     public function getFullNameAttribute(): string
@@ -90,8 +136,44 @@ class User extends Authenticatable
     }
 
     /**
+     * Calculate profile completion percentage
+     */
+    public function calculateProfileCompletion(): int
+    {
+        $fields = [
+            'first_name', 'last_name', 'email', 'bio', 'institution', 
+            'department', 'position', 'avatar'
+        ];
+        
+        $completed = 0;
+        foreach ($fields as $field) {
+            if (!empty($this->$field)) {
+                $completed++;
+            }
+        }
+        
+        return (int) round(($completed / count($fields)) * 100);
+    }
+
+    /**
+     * Find user by UUID
+     */
+    public static function findByUuid(string $uuid): ?User
+    {
+        return static::where('uuid', $uuid)->first();
+    }
+
+    /**
+     * Get the route key for the model
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
+    /**
      * Events hosted by this user
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Event>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Event, $this>
      */
     public function hostedEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
@@ -100,7 +182,7 @@ class User extends Authenticatable
 
     /**
      * Events user has registered for
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Event>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Event, $this>
      */
     public function registeredEvents(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {

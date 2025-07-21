@@ -4,12 +4,16 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Jobs\SendAdminNotification;
+use App\Jobs\SendEventReminder;
+use App\Mail\EventRegistrationConfirmation;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * @OA\Tag(
@@ -191,6 +195,15 @@ class EventController extends Controller
             }
 
             $event = Event::create($data);
+
+            // Send admin notification for new event
+            SendAdminNotification::dispatch($event, 'new_event');
+
+            Log::info('Event created successfully', [
+                'event_id' => $event->id,
+                'host_id' => Auth::id(),
+                'title' => $event->title
+            ]);
 
             return response()->json([
                 'message' => 'Event created and published successfully!',
@@ -514,9 +527,33 @@ class EventController extends Controller
 
         try {
             $event->registrations()->attach(Auth::id(), [
+                'uuid' => \Illuminate\Support\Str::uuid()->toString(),
                 'status' => 'registered',
                 'registered_at' => now(),
                 'notes' => $request->get('notes')
+            ]);
+
+            $user = Auth::user();
+            
+            // Ensure user is authenticated
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+            
+            // Send confirmation email to user
+            Mail::to($user->email)->send(
+                new EventRegistrationConfirmation($user, $event)
+            );
+
+            // Send notification to admins
+            SendAdminNotification::dispatch($event, 'new_registration', $user);
+
+            Log::info('User registered for event', [
+                'user_id' => $user->id,
+                'event_id' => $event->id,
+                'event_title' => $event->title
             ]);
 
             return response()->json([
@@ -734,7 +771,7 @@ class EventController extends Controller
 
         $attendees = $event->registrations()
             ->wherePivot('status', 'registered')
-            ->select(['id', 'first_name', 'last_name', 'email', 'institution', 'position'])
+            ->select(['users.id', 'first_name', 'last_name', 'email', 'institution', 'position'])
             ->get();
 
         return response()->json([
@@ -787,8 +824,15 @@ class EventController extends Controller
      */
     public function banEvent(Request $request, Event $event): JsonResponse
     {
+        // Check if event is already banned
+        if ($event->status === 'banned') {
+            return response()->json([
+                'message' => 'Event is already banned'
+            ], 400);
+        }
+
         $validator = Validator::make($request->all(), [
-            'reason' => 'required|string|max:500'
+            'reason' => 'required|string|max:1000'
         ]);
 
         if ($validator->fails()) {
@@ -854,6 +898,13 @@ class EventController extends Controller
      */
     public function unbanEvent(Event $event): JsonResponse
     {
+        // Check if event is actually banned
+        if ($event->status !== 'banned') {
+            return response()->json([
+                'message' => 'Event is not currently banned'
+            ], 400);
+        }
+
         $event->update([
             'status' => 'published',
             'ban_reason' => null,
@@ -925,6 +976,265 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Event permanently deleted'
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/v1/events/search",
+     *     tags={"Events"},
+     *     summary="Advanced event search",
+     *     description="Search events with advanced filtering options",
+     *     @OA\Parameter(
+     *         name="q",
+     *         in="query",
+     *         description="Search query for title, description, and tags",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="category",
+     *         in="query",
+     *         description="Filter by event category",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"Conference", "Workshop", "Seminar", "Research", "Networking"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="location_type",
+     *         in="query",
+     *         description="Filter by location type",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"physical", "virtual", "hybrid"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_from",
+     *         in="query",
+     *         description="Filter events starting from this date",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="date_to",
+     *         in="query",
+     *         description="Filter events ending before this date",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="tags",
+     *         in="query",
+     *         description="Filter by specific tags (comma-separated)",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="capacity_min",
+     *         in="query",
+     *         description="Minimum event capacity",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="capacity_max",
+     *         in="query",
+     *         description="Maximum event capacity",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="availability",
+     *         in="query",
+     *         description="Filter by availability",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"available", "full", "any"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_by",
+     *         in="query",
+     *         description="Sort results by field",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"date", "popularity", "capacity", "created_at"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_order",
+     *         in="query",
+     *         description="Sort order",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"asc", "desc"})
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Number of results per page (max 50)",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, maximum=50)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Search results retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Event")),
+     *             @OA\Property(property="pagination", ref="#/components/schemas/PaginationMeta"),
+     *             @OA\Property(
+     *                 property="facets",
+     *                 type="object",
+     *                 @OA\Property(property="total_count", type="integer"),
+     *                 @OA\Property(property="location_types", type="object"),
+     *                 @OA\Property(property="popular_tags", type="array", @OA\Items(type="string"))
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'q' => 'sometimes|string|max:255',
+            'category' => 'sometimes|string|in:Conference,Workshop,Seminar,Research,Networking',
+            'location_type' => 'sometimes|string|in:physical,virtual,hybrid',
+            'date_from' => 'sometimes|date',
+            'date_to' => 'sometimes|date|after_or_equal:date_from',
+            'tags' => 'sometimes|string',
+            'capacity_min' => 'sometimes|integer|min:1',
+            'capacity_max' => 'sometimes|integer|min:1|gte:capacity_min',
+            'availability' => 'sometimes|string|in:available,full,any',
+            'sort_by' => 'sometimes|string|in:date,popularity,capacity,created_at',
+            'sort_order' => 'sometimes|string|in:asc,desc',
+            'per_page' => 'sometimes|integer|min:1|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $query = Event::with(['host:id,first_name,last_name,institution'])
+            ->published()
+            ->public()
+            ->upcoming();
+
+        // Text search
+        if ($request->has('q')) {
+            $searchTerm = $request->get('q');
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%")
+                  ->orWhere('location', 'like', "%{$searchTerm}%")
+                  ->orWhereJsonContains('tags', $searchTerm);
+            });
+        }
+
+        // Category filter (check tags for category)
+        if ($request->has('category')) {
+            $query->whereJsonContains('tags', $request->get('category'));
+        }
+
+        // Location type filter
+        if ($request->has('location_type')) {
+            $query->where('location_type', $request->get('location_type'));
+        }
+
+        // Date range filters
+        if ($request->has('date_from')) {
+            $query->where('start_date', '>=', $request->get('date_from'));
+        }
+
+        if ($request->has('date_to')) {
+            $query->where('start_date', '<=', $request->get('date_to'));
+        }
+
+        // Tags filter
+        if ($request->has('tags')) {
+            $tags = explode(',', $request->get('tags'));
+            $tags = array_map('trim', $tags);
+            foreach ($tags as $tag) {
+                $query->whereJsonContains('tags', $tag);
+            }
+        }
+
+        // Capacity filters
+        if ($request->has('capacity_min')) {
+            $query->where('capacity', '>=', $request->get('capacity_min'));
+        }
+
+        if ($request->has('capacity_max')) {
+            $query->where('capacity', '<=', $request->get('capacity_max'));
+        }
+
+        // Availability filter
+        if ($request->has('availability') && $request->get('availability') !== 'any') {
+            $query->withCount(['registrations' => function($q) {
+                $q->wherePivot('status', 'registered');
+            }]);
+
+            if ($request->get('availability') === 'available') {
+                $query->havingRaw('(capacity IS NULL OR registrations_count < capacity)');
+            } elseif ($request->get('availability') === 'full') {
+                $query->havingRaw('(capacity IS NOT NULL AND registrations_count >= capacity)');
+            }
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'date');
+        $sortOrder = $request->get('sort_order', 'asc');
+
+        switch ($sortBy) {
+            case 'popularity':
+                $query->withCount('registrations')
+                      ->orderBy('registrations_count', $sortOrder);
+                break;
+            case 'capacity':
+                $query->orderBy('capacity', $sortOrder);
+                break;
+            case 'created_at':
+                $query->orderBy('created_at', $sortOrder);
+                break;
+            case 'date':
+            default:
+                $query->orderBy('start_date', $sortOrder);
+                break;
+        }
+
+        // Secondary sort by creation date
+        if ($sortBy !== 'created_at') {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        // Pagination
+        $perPage = min($request->get('per_page', 15), 50);
+        $events = $query->paginate($perPage);
+
+        // Generate facets for frontend filtering
+        $facets = [
+            'total_count' => $events->total(),
+            'location_types' => Event::published()->public()->upcoming()
+                ->selectRaw('location_type, COUNT(*) as count')
+                ->groupBy('location_type')
+                ->pluck('count', 'location_type'),
+            'popular_tags' => Event::published()->public()->upcoming()
+                ->whereNotNull('tags')
+                ->get()
+                ->pluck('tags')
+                ->flatten()
+                ->countBy()
+                ->sortDesc()
+                ->take(10)
+                ->keys()
+        ];
+
+        return response()->json([
+            'message' => 'Search results retrieved successfully',
+            'data' => $events->items(),
+            'pagination' => [
+                'current_page' => $events->currentPage(),
+                'last_page' => $events->lastPage(),
+                'per_page' => $events->perPage(),
+                'total' => $events->total(),
+            ],
+            'facets' => $facets
         ]);
     }
 }

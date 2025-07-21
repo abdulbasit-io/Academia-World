@@ -4,11 +4,15 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\EmailVerificationToken;
+use App\Mail\EmailVerification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Password;
@@ -109,10 +113,13 @@ class AuthController extends Controller
 
             event(new Registered($user));
 
+            // Send email verification
+            $this->sendVerificationEmail($user);
+
             return response()->json([
                 'message' => 'Registration successful. Please check your email for verification.',
                 'user' => [
-                    'id' => $user->id,
+                    'uuid' => $user->uuid,
                     'name' => $user->full_name,
                     'email' => $user->email,
                     'institution' => $user->institution,
@@ -192,8 +199,16 @@ class AuthController extends Controller
         }
 
         if (!$user->isActive()) {
+            // Check if email is not verified
+            if (!$user->email_verified_at) {
+                return response()->json([
+                    'message' => 'Please verify your email address to activate your account.',
+                    'action_required' => 'email_verification'
+                ], 403);
+            }
+            
             return response()->json([
-                'message' => 'Account not activated. Please verify your email or contact administrator.'
+                'message' => 'Account not activated. Please contact administrator.'
             ], 403);
         }
 
@@ -207,7 +222,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => [
-                'id' => $user->id,
+                'uuid' => $user->uuid,
                 'name' => $user->full_name,
                 'email' => $user->email,
                 'institution' => $user->institution,
@@ -235,7 +250,7 @@ class AuthController extends Controller
         
         return response()->json([
             'user' => [
-                'id' => $user->id,
+                'uuid' => $user->uuid,
                 'name' => $user->full_name,
                 'email' => $user->email,
                 'institution' => $user->institution,
@@ -362,24 +377,172 @@ class AuthController extends Controller
     }
 
     /**
-     * Verify email (placeholder - implement based on your email verification strategy)
+     * Verify email address
+     * 
+     * @OA\Post(
+     *     path="/api/v1/auth/verify-email",
+     *     tags={"Authentication"},
+     *     summary="Verify user email address",
+     *     description="Verify user email address using verification token",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"token"},
+     *             @OA\Property(property="token", type="string", example="abc123def456")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Email verified successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Email verified successfully")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Invalid or expired token"),
+     *     @OA\Response(response=422, description="Validation errors")
+     * )
      */
     public function verifyEmail(Request $request): JsonResponse
     {
-        // Implementation depends on your email verification strategy
+        $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+        ]);
+
+        /** @phpstan-ignore-next-line */
+        $verificationToken = EmailVerificationToken::where('token', $request->token)
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$verificationToken) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired verification token'
+            ], 400);
+        }
+
+        if ($verificationToken->expires_at < now()) {
+            $verificationToken->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'Verification token has expired'
+            ], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 400);
+        }
+
+        $user->markEmailAsVerified();
+        $verificationToken->delete();
+
         return response()->json([
-            'message' => 'Email verification endpoint - to be implemented'
+            'success' => true,
+            'message' => 'Email verified successfully'
         ]);
     }
 
     /**
      * Resend verification email
+     * 
+     * @OA\Post(
+     *     path="/api/v1/auth/resend-verification",
+     *     tags={"Authentication"},
+     *     summary="Resend email verification",
+     *     description="Resend email verification to user",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", example="john.doe@university.edu")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Verification email sent",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Verification email sent")
+     *         )
+     *     ),
+     *     @OA\Response(response=400, description="Email already verified or user not found"),
+     *     @OA\Response(response=422, description="Validation errors")
+     * )
      */
     public function resendVerification(Request $request): JsonResponse
     {
-        // Implementation depends on your email verification strategy
-        return response()->json([
-            'message' => 'Verification email resent'
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email'
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            if ($user->email_verified_at) {
+                return response()->json([
+                    'message' => 'Email is already verified'
+                ], 400);
+            }
+
+            // Send verification email
+            $this->sendVerificationEmail($user);
+
+            return response()->json([
+                'message' => 'Verification email sent successfully. Please check your inbox.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to resend verification email: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to send verification email'
+            ], 500);
+        }
+    }
+
+    /**
+     * Send verification email to user
+     */
+    private function sendVerificationEmail(User $user): void
+    {
+        // Delete any existing verification tokens for this email
+        /** @phpstan-ignore-next-line */
+        EmailVerificationToken::where('email', $user->email)->delete();
+
+        // Create new verification token
+        $token = Str::random(64);
+        /** @phpstan-ignore-next-line */
+        EmailVerificationToken::create([
+            'email' => $user->email,
+            'token' => $token,
+            'expires_at' => now()->addHour(), // Token expires in 1 hour
+        ]);
+
+        // Generate verification URL
+        $verificationUrl = URL::temporarySignedRoute(
+            'email.verify',
+            now()->addHour(),
+            ['token' => $token]
+        );
+
+        // Send email
+        Mail::to($user->email)->queue(
+            new EmailVerification($user, $verificationUrl)
+        );
     }
 }

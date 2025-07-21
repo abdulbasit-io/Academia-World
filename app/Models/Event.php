@@ -6,10 +6,37 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 /**
  * @template TFactory of \Illuminate\Database\Eloquent\Factories\Factory
+ * @property string $uuid
+ * @property int $host_id
+ * @property string $title
+ * @property string $description
+ * @property \Illuminate\Support\Carbon $start_date
+ * @property \Illuminate\Support\Carbon $end_date
+ * @property string $timezone
+ * @property string $location_type
+ * @property string|null $location
+ * @property string|null $virtual_link
+ * @property int|null $capacity
+ * @property string|null $poster
+ * @property array<string, mixed>|null $agenda
+ * @property array<string>|null $tags
+ * @property string $status draft|pending_approval|published|cancelled|completed|banned
+ * @property string $visibility
+ * @property string|null $requirements
+ * @property \Illuminate\Support\Carbon|null $moderated_at
+ * @property int|null $moderated_by
+ * @property string|null $moderation_reason
+ * @property string|null $ban_reason
+ * @property \Illuminate\Support\Carbon|null $banned_at
+ * @property int|null $banned_by
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
  */
 class Event extends Model
 {
@@ -17,7 +44,7 @@ class Event extends Model
     use HasFactory;
 
     protected $fillable = [
-        'host_id', 'title', 'description', 'start_date', 'end_date',
+        'uuid', 'host_id', 'title', 'description', 'start_date', 'end_date',
         'timezone', 'location_type', 'location', 'virtual_link', 'capacity',
         'poster', 'agenda', 'tags', 'status', 'visibility', 'requirements',
         'moderated_at', 'moderated_by', 'moderation_reason',
@@ -33,8 +60,19 @@ class Event extends Model
         'tags' => 'array',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = Str::uuid()->toString();
+            }
+        });
+    }
+
     /**
-     * @return BelongsTo<User, Event>
+     * @return BelongsTo<User, $this>
      */
     public function host(): BelongsTo
     {
@@ -42,7 +80,7 @@ class Event extends Model
     }
 
     /**
-     * @return BelongsTo<User, Event>
+     * @return BelongsTo<User, $this>
      */
     public function moderatedBy(): BelongsTo
     {
@@ -50,13 +88,37 @@ class Event extends Model
     }
 
     /**
-     * @return BelongsToMany<User, \Illuminate\Database\Eloquent\Relations\Pivot>
+     * @return BelongsToMany<User, $this>
      */
     public function registrations(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'event_registrations')
-                    ->withPivot('status', 'registered_at', 'notes')
+                    ->withPivot('uuid', 'status', 'registered_at', 'notes')
                     ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<EventResource, $this>
+     */
+    public function resources(): HasMany
+    {
+        return $this->hasMany(EventResource::class);
+    }
+
+    /**
+     * @return HasMany<EventResource, $this>
+     */
+    public function activeResources(): HasMany
+    {
+        return $this->hasMany(EventResource::class)->where('status', 'active');
+    }
+
+    /**
+     * @return HasMany<EventResource, $this>
+     */
+    public function publicResources(): HasMany
+    {
+        return $this->hasMany(EventResource::class)->where('is_public', true)->where('status', 'active');
     }
 
     // Scopes
@@ -85,6 +147,22 @@ class Event extends Model
     public function scopeBanned(Builder $query): Builder
     {
         return $query->where('status', 'banned');
+    }
+
+    /**
+     * Find event by UUID
+     */
+    public static function findByUuid(string $uuid): ?Event
+    {
+        return static::where('uuid', $uuid)->first();
+    }
+
+    /**
+     * Get the route key for the model
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
     }
 
     /**
