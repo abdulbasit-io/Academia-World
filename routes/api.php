@@ -91,9 +91,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::delete('connections/{connection}', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'destroy']);
     Route::get('users/search', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'searchUsers']);
     
-    // Admin routes
-    Route::middleware('admin')->prefix('admin')->group(function () {
-        // Admin Dashboard & Analytics
+        // Admin routes
+    Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+        // Dashboard & Analytics
         Route::get('dashboard', [\App\Http\Controllers\Api\V1\AdminController::class, 'dashboard']);
         Route::get('analytics', [\App\Http\Controllers\Api\V1\AdminController::class, 'analytics']);
         Route::get('platform-health', [\App\Http\Controllers\Api\V1\AdminController::class, 'platformHealth']);
@@ -101,7 +101,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         
         // User Management
         Route::get('users', [\App\Http\Controllers\Api\V1\AdminController::class, 'users']);
-        Route::post('users/{user}/toggle-ban', [\App\Http\Controllers\Api\V1\AdminController::class, 'toggleUserBan']);
+        Route::put('users/{user}/ban', [\App\Http\Controllers\Api\V1\AdminController::class, 'toggleUserBan']);
         
         // Event Management
         Route::get('events', [\App\Http\Controllers\Api\V1\AdminController::class, 'events']);

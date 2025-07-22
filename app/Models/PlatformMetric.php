@@ -71,11 +71,4 @@ class PlatformMetric extends Model
     {
         return $query->where('metric_date', '>=', now()->subDays($days));
     }
-}space App\Models;
-
-use Illuminate\Database\Eloquent\Model;
-
-class PlatformMetric extends Model
-{
-    //
 }

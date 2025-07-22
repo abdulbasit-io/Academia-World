@@ -88,7 +88,7 @@ test('admin can ban user', function () {
 
     $this->actingAs($this->admin, 'sanctum');
 
-    $response = $this->postJson("/api/v1/admin/users/{$userToBan->uuid}/toggle-ban", [
+    $response = $this->putJson("/api/v1/admin/users/{$userToBan->uuid}/ban", [
         'reason' => 'Inappropriate behavior'
     ]);
 
@@ -124,7 +124,7 @@ test('admin can unban user', function () {
 
     $this->actingAs($this->admin, 'sanctum');
 
-    $response = $this->postJson("/api/v1/admin/users/{$bannedUser->uuid}/toggle-ban", [
+    $response = $this->putJson("/api/v1/admin/users/{$bannedUser->uuid}/ban", [
         'reason' => 'Reviewed and lifted'
     ]);
 
@@ -169,7 +169,7 @@ test('ban user validation requires reason', function () {
 
     $this->actingAs($this->admin, 'sanctum');
 
-    $response = $this->postJson("/api/v1/admin/users/{$userToBan->uuid}/toggle-ban", []);
+    $response = $this->putJson("/api/v1/admin/users/{$userToBan->uuid}/ban", []);
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['reason']);

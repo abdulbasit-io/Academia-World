@@ -13,20 +13,34 @@ class AnalyticsEventFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->uuid(),
-            'event_type' => $this->faker->randomElement(['user_action', 'engagement_metric', 'system_event']),
-            'action' => $this->faker->randomElement(['page_view', 'click', 'event_view', 'event_register', 'forum_post', 'user_connect']),
-            'entity_type' => $this->faker->randomElement(['event', 'user', 'forum', 'post']),
-            'entity_id' => $this->faker->uuid(),
+            'uuid' => sprintf(
+                '%08x-%04x-%04x-%04x-%012x',
+                mt_rand(0, 0xffffffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffffffffffff)
+            ),
+            'event_type' => 'user_action',
+            'action' => 'page_view',
+            'entity_type' => 'event',
+            'entity_id' => 1,
             'user_id' => User::factory(),
             'metadata' => [
-                'page' => $this->faker->randomNumber(),
-                'source' => $this->faker->randomElement(['organic', 'direct', 'social']),
+                'page' => 123,
+                'source' => 'direct',
             ],
-            'ip_address' => $this->faker->ipv4(),
-            'user_agent' => $this->faker->userAgent(),
-            'session_id' => $this->faker->uuid(),
-            'occurred_at' => $this->faker->dateTimeBetween('-30 days', 'now'),
+            'ip_address' => '192.168.1.1',
+            'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'session_id' => sprintf(
+                '%08x-%04x-%04x-%04x-%012x',
+                mt_rand(0, 0xffffffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffffffffffff)
+            ),
+            'occurred_at' => now(),
         ];
     }
 
@@ -64,7 +78,7 @@ class AnalyticsEventFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'occurred_at' => $this->faker->dateTimeBetween('-1 hour', 'now'),
+                'occurred_at' => now(),
             ];
         });
     }

@@ -24,7 +24,7 @@ abstract class TestCase extends BaseTestCase
         $this->artisan('migrate:fresh');
         
         // Seed basic data if needed
-        $this->seed();
+        // $this->seed();
     }
 
     /**

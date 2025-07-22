@@ -191,6 +191,15 @@ class User extends Authenticatable
     }
 
     /**
+     * All events associated with this user (alias for hostedEvents for compatibility)
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Event, $this>
+     */
+    public function events(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hostedEvents();
+    }
+
+    /**
      * Events user has registered for
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Event, $this>
      */
@@ -257,11 +266,11 @@ class User extends Authenticatable
     public function isConnectedTo(User $user): bool
     {
         return UserConnection::where(function ($query) use ($user) {
-            $query->where('requester_id', $this->id)
-                  ->where('addressee_id', $user->id);
+            $query->where('requester_id', $this->getKey())
+                  ->where('addressee_id', $user->getKey());
         })->orWhere(function ($query) use ($user) {
-            $query->where('requester_id', $user->id)
-                  ->where('addressee_id', $this->id);
+            $query->where('requester_id', $user->getKey())
+                  ->where('addressee_id', $this->getKey());
         })->where('status', 'accepted')->exists();
     }
 
@@ -271,11 +280,11 @@ class User extends Authenticatable
     public function getConnectionStatusWith(User $user): ?string
     {
         $connection = UserConnection::where(function ($query) use ($user) {
-            $query->where('requester_id', $this->id)
-                  ->where('addressee_id', $user->id);
+            $query->where('requester_id', $this->getKey())
+                  ->where('addressee_id', $user->getKey());
         })->orWhere(function ($query) use ($user) {
-            $query->where('requester_id', $user->id)
-                  ->where('addressee_id', $this->id);
+            $query->where('requester_id', $user->getKey())
+                  ->where('addressee_id', $this->getKey());
         })->first();
 
         return $connection?->status;
@@ -287,8 +296,8 @@ class User extends Authenticatable
     public function sendConnectionRequest(User $user, ?string $message = null): UserConnection
     {
         return UserConnection::create([
-            'requester_id' => $this->id,
-            'addressee_id' => $user->id,
+            'requester_id' => $this->getKey(),
+            'addressee_id' => $user->getKey(),
             'status' => 'pending',
             'message' => $message,
         ]);

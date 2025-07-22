@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -23,38 +24,26 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
-        $firstName = $this->faker->firstName();
-        $lastName = $this->faker->lastName();
+        static $counter = 1;
         
         return [
-            'name' => $firstName . ' ' . $lastName,
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'email' => $this->faker->unique()->safeEmail(),
+            'name' => 'Test User ' . $counter,
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'email' => 'test' . $counter++ . '@example.com',
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
-            'uuid' => Str::uuid()->toString(),
-            'bio' => $this->faker->paragraph(),
-            'institution' => $this->faker->company(),
-            'department' => $this->faker->jobTitle(),
-            'position' => $this->faker->jobTitle(),
-            'website' => $this->faker->optional()->url(),
-            'phone' => $this->faker->optional()->phoneNumber(),
-            'social_links' => $this->faker->optional()->randomElement([
-                null,
-                [
-                    'twitter' => '@' . $this->faker->userName(),
-                    'linkedin' => $this->faker->url(),
-                ]
-            ]),
-            'account_status' => 'pending',
-            'preferences' => $this->faker->optional()->randomElement([
-                null,
-                ['notifications' => true, 'newsletter' => false]
-            ]),
-            'last_login_at' => $this->faker->optional()->dateTimeBetween('-30 days'),
-            'is_admin' => false,
+            'password' => static::$password ??= \Illuminate\Support\Facades\Hash::make('password'),
+            'remember_token' => substr(bin2hex(random_bytes(5)), 0, 10),
+            'created_at' => now(),
+            'updated_at' => now(),
+            'uuid' => sprintf(
+                '%08x-%04x-%04x-%04x-%012x',
+                mt_rand(0, 0xffffffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffffffffffff)
+            ),
         ];
     }
 
@@ -69,12 +58,44 @@ class UserFactory extends Factory
     }
 
     /**
-     * Indicate that the user is an admin.
+     * Indicate that the user should be an admin.
      */
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
             'is_admin' => true,
+        ]);
+    }
+
+    /**
+     * Indicate that the user should be banned.
+     */
+    public function banned(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_banned' => true,
+            'ban_reason' => 'Test ban reason',
+            'banned_at' => now(),
+        ]);
+    }
+
+    /**
+     * Indicate that the user should be verified.
+     */
+    public function verified(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'email_verified_at' => now(),
+        ]);
+    }
+
+    /**
+     * Set a specific role for the user.
+     */
+    public function withRole(string $role): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => $role,
         ]);
     }
 }

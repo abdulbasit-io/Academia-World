@@ -14,9 +14,7 @@ class AnalyticsController extends Controller
 {
     public function __construct(private AnalyticsService $analyticsService)
     {
-        parent::__construct();
-        $this->middleware('auth:sanctum');
-        $this->middleware('admin');
+        // Middleware is handled via routes
     }
 
     /**
@@ -115,10 +113,10 @@ class AnalyticsController extends Controller
         $summary = [
             'total_events' => $events->count(),
             'unique_users' => $events->pluck('user_id')->filter()->unique()->count(),
-            'top_actions' => $events->groupBy('action')->map->count()->sortDesc()->take(5),
+            'top_actions' => $events->groupBy('action')->map(fn($group) => $group->count())->sortDesc()->take(5),
             'event_timeline' => $events->groupBy(function ($event) {
                 return $event->occurred_at->format('H:i');
-            })->map->count(),
+            })->map(fn($group) => $group->count()),
         ];
 
         return response()->json([
@@ -164,27 +162,27 @@ class AnalyticsController extends Controller
         $query = AnalyticsEvent::query();
 
         if ($request->filled('event_type')) {
-            $query->ofType($request->event_type);
+            $query->ofType($request->input('event_type'));
         }
 
         if ($request->filled('action')) {
-            $query->action($request->action);
+            $query->action($request->input('action'));
         }
 
         if ($request->filled('entity_type')) {
-            $query->forEntity($request->entity_type, $request->entity_id);
+            $query->forEntity($request->input('entity_type'), $request->input('entity_id'));
         }
 
         if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
+            $query->where('user_id', $request->input('user_id'));
         }
 
         if ($request->filled('start_date')) {
-            $query->where('occurred_at', '>=', $request->start_date);
+            $query->where('occurred_at', '>=', $request->input('start_date'));
         }
 
         if ($request->filled('end_date')) {
-            $query->where('occurred_at', '<=', $request->end_date);
+            $query->where('occurred_at', '<=', $request->input('end_date'));
         }
 
         $events = $query->with('user:id,name')

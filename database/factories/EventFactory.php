@@ -18,34 +18,34 @@ class EventFactory extends Factory
      */
     public function definition(): array
     {
-        $startDate = $this->faker->dateTimeBetween('+1 week', '+3 months');
+        $startDate = now()->addDays(7);
         $endDate = clone $startDate;
-        $endDate->modify('+' . $this->faker->numberBetween(1, 6) . ' hours');
+        $endDate->modify('+3 hours');
 
         return [
-            'uuid' => Str::uuid()->toString(),
-            'title' => $this->faker->sentence(4),
-            'description' => $this->faker->paragraphs(3, true),
+            'uuid' => sprintf(
+                '%08x-%04x-%04x-%04x-%012x',
+                mt_rand(0, 0xffffffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffff),
+                mt_rand(0, 0xffffffffffff)
+            ),
+            'title' => 'Test Event',
+            'description' => 'Test description for the event.',
             'start_date' => $startDate,
             'end_date' => $endDate,
             'timezone' => 'UTC',
-            'location_type' => $this->faker->randomElement(['physical', 'virtual', 'hybrid']),
-            'location' => $this->faker->address(),
-            'virtual_link' => $this->faker->optional()->url(),
-            'capacity' => $this->faker->numberBetween(10, 100),
-            'poster' => $this->faker->optional()->imageUrl(),
-            'tags' => $this->faker->randomElements(['conference', 'workshop', 'seminar', 'networking', 'research'], $this->faker->numberBetween(1, 3)),
-            'requirements' => $this->faker->optional()->sentence(),
-            'agenda' => $this->faker->optional()->randomElement([
-                null,
-                [
-                    ['time' => '09:00', 'activity' => 'Registration'],
-                    ['time' => '10:00', 'activity' => 'Opening Keynote'],
-                    ['time' => '11:30', 'activity' => 'Panel Discussion'],
-                ]
-            ]),
+            'location_type' => 'virtual',
+            'location' => 'Test Address',
+            'virtual_link' => 'https://example.com',
+            'capacity' => 50,
+            'poster' => null,
+            'tags' => ['workshop', 'seminar'],
+            'requirements' => 'Test requirements',
+            'agenda' => null,
             'host_id' => User::factory(),
-            'visibility' => $this->faker->randomElement(['public', 'private']),
+            'visibility' => 'public',
             'status' => 'published',
         ];
     }
@@ -88,7 +88,7 @@ class EventFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'status' => 'banned',
             'banned_at' => now(),
-            'ban_reason' => $this->faker->sentence(),
+            'ban_reason' => 'Test ban reason',
         ]);
     }
 
@@ -118,9 +118,9 @@ class EventFactory extends Factory
     public function past(): static
     {
         return $this->state(function (array $attributes) {
-            $pastStartDate = $this->faker->dateTimeBetween('-3 months', '-1 week');
+            $pastStartDate = now()->subDays(7);
             $pastEndDate = clone $pastStartDate;
-            $pastEndDate->modify('+' . $this->faker->numberBetween(1, 6) . ' hours');
+            $pastEndDate->modify('+3 hours');
             
             return [
                 'start_date' => $pastStartDate,
