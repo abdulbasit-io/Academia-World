@@ -109,7 +109,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         
         // User Management
         Route::get('users', [AdminController::class, 'users']);
+        Route::post('users', [AdminController::class, 'createAdmin']);
         Route::put('users/{user}/ban', [AdminController::class, 'toggleUserBan']);
+        Route::post('users/{user}/promote', [AdminController::class, 'promoteUser']);
+        Route::post('users/{user}/demote', [AdminController::class, 'demoteUser']);
         
         // Event Management
         Route::get('events', [AdminController::class, 'events']);
