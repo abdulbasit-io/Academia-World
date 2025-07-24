@@ -436,7 +436,6 @@ php artisan test
 ## 📖 User Guide
 
 ### For Administrators
-- Access admin dashboard at `/admin`
 - Manage users, events, and system settings
 - View audit logs and analytics
 - Configure platform permissions
@@ -466,10 +465,6 @@ php artisan test
 - Write comprehensive tests for new features
 - Update API documentation for endpoint changes
 - Ensure all tests pass before submitting PR
-
-## 📄 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
