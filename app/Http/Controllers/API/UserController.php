@@ -37,7 +37,7 @@ class UserController extends Controller
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
-     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="uuid", type="string", format="uuid"),
      *                 @OA\Property(property="first_name", type="string"),
      *                 @OA\Property(property="last_name", type="string"),
      *                 @OA\Property(property="email", type="string"),

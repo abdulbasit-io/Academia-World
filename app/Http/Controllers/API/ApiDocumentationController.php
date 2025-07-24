@@ -35,7 +35,7 @@ use App\Http\Controllers\Controller;
  * @OA\Schema(
  *     schema="User",
  *     type="object",
- *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="uuid", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
  *     @OA\Property(property="first_name", type="string", example="John"),
  *     @OA\Property(property="last_name", type="string", example="Doe"),
  *     @OA\Property(property="email", type="string", format="email", example="john.doe@university.edu"),
@@ -56,7 +56,7 @@ use App\Http\Controllers\Controller;
  * @OA\Schema(
  *     schema="Event",
  *     type="object",
- *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="uuid", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
  *     @OA\Property(property="title", type="string", example="AI in Academic Research"),
  *     @OA\Property(property="description", type="string"),
  *     @OA\Property(property="start_date", type="string", format="date-time"),
@@ -87,7 +87,7 @@ use App\Http\Controllers\Controller;
  * @OA\Schema(
  *     schema="EventRegistration",
  *     type="object",
- *     @OA\Property(property="id", type="integer"),
+ *     @OA\Property(property="uuid", type="string", format="uuid"),
  *     @OA\Property(property="event", ref="#/components/schemas/Event"),
  *     @OA\Property(property="notes", type="string", nullable=true),
  *     @OA\Property(property="registered_at", type="string", format="date-time")

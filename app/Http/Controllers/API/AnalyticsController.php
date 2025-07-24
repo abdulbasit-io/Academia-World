@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1\Admin;
+namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Services\AnalyticsService;
@@ -10,6 +10,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
 
+/**
+ * @OA\Tag(
+ *     name="Analytics",
+ *     description="Platform analytics and metrics for administrators"
+ * )
+ */
 class AnalyticsController extends Controller
 {
     public function __construct(private AnalyticsService $analyticsService)
@@ -18,7 +24,44 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get platform overview statistics
+     * @OA\Get(
+     *     path="/api/v1/admin/analytics/overview",
+     *     summary="Get platform overview statistics",
+     *     description="Retrieve comprehensive platform statistics for the specified time period",
+     *     operationId="getPlatformOverview",
+     *     tags={"Analytics"},
+     *     @OA\Parameter(
+     *         name="days",
+     *         in="query",
+     *         description="Number of days to include in statistics",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, maximum=365, example=30)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Platform overview retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Platform overview retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="total_users", type="integer"),
+     *                 @OA\Property(property="total_events", type="integer"),
+     *                 @OA\Property(property="total_registrations", type="integer"),
+     *                 @OA\Property(property="active_users", type="integer"),
+     *                 @OA\Property(property="growth_metrics", type="object")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access denied - Admin privileges required",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Access denied")
+     *         )
+     *     ),
+     *     security={{"sanctum":{}}}
+     * )
      */
     public function overview(Request $request): JsonResponse
     {
@@ -32,7 +75,41 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get user engagement analytics
+     * @OA\Get(
+     *     path="/api/v1/admin/analytics/user-engagement",
+     *     summary="Get user engagement analytics",
+     *     description="Retrieve user engagement metrics for the specified date range",
+     *     operationId="getUserEngagementAnalytics",
+     *     tags={"Analytics"},
+     *     @OA\Parameter(
+     *         name="start_date",
+     *         in="query",
+     *         description="Start date for analytics (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="end_date",
+     *         in="query",
+     *         description="End date for analytics (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="User engagement analytics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="User engagement analytics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="metrics", type="array", @OA\Items(type="object")),
+     *                 @OA\Property(property="summary", type="object")
+     *             )
+     *         )
+     *     ),
+     *     security={{"sanctum":{}}}
+     * )
      */
     public function userEngagement(Request $request): JsonResponse
     {
@@ -54,7 +131,41 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get event engagement analytics
+     * @OA\Get(
+     *     path="/api/v1/admin/analytics/event-engagement",
+     *     summary="Get event engagement analytics",
+     *     description="Retrieve event engagement metrics for the specified date range",
+     *     operationId="getEventEngagementAnalytics",
+     *     tags={"Analytics"},
+     *     @OA\Parameter(
+     *         name="start_date",
+     *         in="query",
+     *         description="Start date for analytics (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="end_date",
+     *         in="query",
+     *         description="End date for analytics (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Event engagement analytics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Event engagement analytics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="metrics", type="array", @OA\Items(type="object")),
+     *                 @OA\Property(property="summary", type="object")
+     *             )
+     *         )
+     *     ),
+     *     security={{"sanctum":{}}}
+     * )
      */
     public function eventEngagement(Request $request): JsonResponse
     {
@@ -76,7 +187,41 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Get forum activity analytics
+     * @OA\Get(
+     *     path="/api/v1/admin/analytics/forum-activity",
+     *     summary="Get forum activity analytics",
+     *     description="Retrieve forum activity metrics for the specified date range",
+     *     operationId="getForumActivityAnalytics",
+     *     tags={"Analytics"},
+     *     @OA\Parameter(
+     *         name="start_date",
+     *         in="query",
+     *         description="Start date for analytics (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="end_date",
+     *         in="query",
+     *         description="End date for analytics (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Forum activity analytics retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Forum activity analytics retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="metrics", type="array", @OA\Items(type="object")),
+     *                 @OA\Property(property="summary", type="object")
+     *             )
+     *         )
+     *     ),
+     *     security={{"sanctum":{}}}
+     * )
      */
     public function forumActivity(Request $request): JsonResponse
     {

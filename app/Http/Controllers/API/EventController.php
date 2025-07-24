@@ -220,16 +220,16 @@ class EventController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/events/{id}",
+     *     path="/api/v1/events/{event}",
      *     tags={"Events"},
      *     summary="Get event details",
      *     description="Retrieve detailed information about a specific event",
      *     @OA\Parameter(
-     *         name="id",
+     *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
+     *         description="Event UUID",
+     *         @OA\Schema(type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -278,17 +278,17 @@ class EventController extends Controller
 
     /**
      * @OA\Put(
-     *     path="/api/v1/events/{id}",
+     *     path="/api/v1/events/{event}",
      *     tags={"Events"},
      *     summary="Update an event",
      *     description="Update event details (only by event owner)",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
+     *         description="Event UUID",
+     *         @OA\Schema(type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
      *     ),
      *     @OA\RequestBody(
      *         required=false,
@@ -388,17 +388,17 @@ class EventController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/events/{id}",
+     *     path="/api/v1/events/{event}",
      *     tags={"Events"},
      *     summary="Delete an event",
      *     description="Delete event (only by event owner)",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
+     *         description="Event UUID",
+     *         @OA\Schema(type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -451,17 +451,17 @@ class EventController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/events/{id}/register",
+     *     path="/api/v1/events/{event}/register",
      *     tags={"Events"},
      *     summary="Register for an event",
      *     description="Register the authenticated user for a specific event",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
+     *         description="Event UUID",
+     *         @OA\Schema(type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
      *     ),
      *     @OA\RequestBody(
      *         required=false,
@@ -475,8 +475,8 @@ class EventController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string", example="Successfully registered for event"),
      *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="event_id", type="integer"),
-     *                 @OA\Property(property="user_id", type="integer"),
+     *                 @OA\Property(property="event_uuid", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="user_uuid", type="string", format="uuid", example="660f9400-e29b-41d4-a716-446655440001"),
      *                 @OA\Property(property="notes", type="string", nullable=true),
      *                 @OA\Property(property="registered_at", type="string", format="date-time")
      *             )

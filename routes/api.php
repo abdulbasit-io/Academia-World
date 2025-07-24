@@ -6,6 +6,11 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\EventController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\ResourceController;
+use App\Http\Controllers\API\ForumController;
+use App\Http\Controllers\API\ForumPostController;
+use App\Http\Controllers\API\UserConnectionController;
+use App\Http\Controllers\API\AdminController;
+use App\Http\Controllers\API\AnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,49 +72,52 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::delete('resources/{resource}', [ResourceController::class, 'destroy']);
     
     // Community features - Discussion Forums
-    Route::get('events/{event}/forums', [\App\Http\Controllers\Api\V1\ForumController::class, 'index']);
-    Route::post('events/{event}/forums', [\App\Http\Controllers\Api\V1\ForumController::class, 'store']);
-    Route::get('forums/{forum}', [\App\Http\Controllers\Api\V1\ForumController::class, 'show']);
-    Route::put('forums/{forum}', [\App\Http\Controllers\Api\V1\ForumController::class, 'update']);
-    Route::delete('forums/{forum}', [\App\Http\Controllers\Api\V1\ForumController::class, 'destroy']);
+    Route::get('events/{event}/forums', [ForumController::class, 'index']);
+    Route::post('events/{event}/forums', [ForumController::class, 'store']);
+    Route::get('forums/{forum}', [ForumController::class, 'show']);
+    Route::put('forums/{forum}', [ForumController::class, 'update']);
+    Route::delete('forums/{forum}', [ForumController::class, 'destroy']);
     
     // Forum Posts
-    Route::get('forums/{forum}/posts', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'index']);
-    Route::post('forums/{forum}/posts', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'store']);
-    Route::get('posts/{post}', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'show']);
-    Route::put('posts/{post}', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'update']);
-    Route::delete('posts/{post}', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'destroy']);
-    Route::post('posts/{post}/like', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'toggleLike']);
-    Route::post('posts/{post}/pin', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'togglePin']);
-    Route::post('posts/{post}/solution', [\App\Http\Controllers\Api\V1\ForumPostController::class, 'markAsSolution']);
+    Route::get('forums/{forum}/posts', [ForumPostController::class, 'index']);
+    Route::post('forums/{forum}/posts', [ForumPostController::class, 'store']);
+    Route::get('posts/{post}', [ForumPostController::class, 'show']);
+    Route::put('posts/{post}', [ForumPostController::class, 'update']);
+    Route::delete('posts/{post}', [ForumPostController::class, 'destroy']);
+    Route::post('posts/{post}/like', [ForumPostController::class, 'toggleLike']);
+    Route::post('posts/{post}/pin', [ForumPostController::class, 'togglePin']);
+    Route::post('posts/{post}/solution', [ForumPostController::class, 'markAsSolution']);
     
     // User Connections/Networking
-    Route::get('connections', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'index']);
-    Route::get('connections/pending', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'pending']);
-    Route::post('connections', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'store']);
-    Route::put('connections/{connection}/respond', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'respond']);
-    Route::delete('connections/{connection}', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'destroy']);
-    Route::get('users/search', [\App\Http\Controllers\Api\V1\UserConnectionController::class, 'searchUsers']);
+    Route::get('connections', [UserConnectionController::class, 'index']);
+    Route::get('connections/pending', [UserConnectionController::class, 'pending']);
+    Route::post('connections', [UserConnectionController::class, 'store']);
+    Route::put('connections/{connection}/respond', [UserConnectionController::class, 'respond']);
+    Route::delete('connections/{connection}', [UserConnectionController::class, 'destroy']);
+    Route::get('users/search', [UserConnectionController::class, 'searchUsers']);
     
         // Admin routes
     Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
         // Dashboard & Analytics
-        Route::get('dashboard', [\App\Http\Controllers\Api\V1\AdminController::class, 'dashboard']);
-        Route::get('analytics', [\App\Http\Controllers\Api\V1\AdminController::class, 'analytics']);
-        Route::get('platform-health', [\App\Http\Controllers\Api\V1\AdminController::class, 'platformHealth']);
-        Route::get('logs', [\App\Http\Controllers\Api\V1\AdminController::class, 'adminLogs']);
+        Route::get('dashboard', [AdminController::class, 'dashboard']);
+        Route::get('analytics/overview', [AnalyticsController::class, 'overview']);
+        Route::get('analytics/user-engagement', [AnalyticsController::class, 'userEngagement']);
+        Route::get('analytics/event-engagement', [AnalyticsController::class, 'eventEngagement']);
+        Route::get('analytics/forum-activity', [AnalyticsController::class, 'forumActivity']);
+        Route::get('platform-health', [AdminController::class, 'platformHealth']);
+        Route::get('logs', [AdminController::class, 'adminLogs']);
         
         // User Management
-        Route::get('users', [\App\Http\Controllers\Api\V1\AdminController::class, 'users']);
-        Route::put('users/{user}/ban', [\App\Http\Controllers\Api\V1\AdminController::class, 'toggleUserBan']);
+        Route::get('users', [AdminController::class, 'users']);
+        Route::put('users/{user}/ban', [AdminController::class, 'toggleUserBan']);
         
         // Event Management
-        Route::get('events', [\App\Http\Controllers\Api\V1\AdminController::class, 'events']);
-        Route::put('events/{event}/status', [\App\Http\Controllers\Api\V1\AdminController::class, 'updateEventStatus']);
-        Route::delete('events/{event}', [\App\Http\Controllers\Api\V1\AdminController::class, 'deleteEvent']);
+        Route::get('events', [AdminController::class, 'events']);
+        Route::put('events/{event}/status', [AdminController::class, 'updateEventStatus']);
+        Route::delete('events/{event}', [AdminController::class, 'deleteEvent']);
         
         // Content Moderation
-        Route::get('forum-posts', [\App\Http\Controllers\Api\V1\AdminController::class, 'forumPosts']);
-        Route::delete('forum-posts/{post}', [\App\Http\Controllers\Api\V1\AdminController::class, 'deleteForumPost']);
+        Route::get('forum-posts', [AdminController::class, 'forumPosts']);
+        Route::delete('forum-posts/{post}', [AdminController::class, 'deleteForumPost']);
     });
 });
