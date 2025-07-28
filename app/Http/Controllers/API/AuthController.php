@@ -135,7 +135,8 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Registration failed',
-                'error' => 'Something went wrong. Please try again.'
+                'error' => 'Something went wrong. Please try again.',
+                'trace'=> $e->getMessage()
             ], 500);
         }
     }
@@ -161,6 +162,7 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="Login successful"),
      *             @OA\Property(property="access_token", type="string", example="1|TOKEN_HERE"),
      *             @OA\Property(property="token_type", type="string", example="Bearer"),
+     *             @OA\Property(property="expires_in", type="integer", example=172800, description="Token expiration in minutes"),
      *             @OA\Property(property="user", ref="#/components/schemas/User")
      *         )
      *     ),
@@ -220,12 +222,18 @@ class AuthController extends Controller
         // Update last login
         $user->update(['last_login_at' => now()]);
 
-        $token = $user->createToken('academia-world-token')->plainTextToken;
+        // Create token with expiration (4 months)
+        $token = $user->createToken(
+            'academia-world-token',
+            ['*'],
+            now()->addMonths(4)
+        )->plainTextToken;
 
         return response()->json([
             'message' => 'Login successful',
             'access_token' => $token,
             'token_type' => 'Bearer',
+            'expires_in' => 60 * 24 * 120, // 4 months in minutes
             'user' => [
                 'uuid' => $user->uuid,
                 'name' => $user->full_name,
@@ -341,6 +349,80 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Logged out successfully'
+        ]);
+    }
+
+    /**
+     * Refresh access token
+     * 
+     * @OA\Post(
+     *     path="/api/v1/auth/refresh",
+     *     tags={"Authentication"},
+     *     summary="Refresh access token",
+     *     description="Refresh the current access token with a new one",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Token refreshed successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Token refreshed successfully"),
+     *             @OA\Property(property="access_token", type="string", example="1|NEW_TOKEN_HERE"),
+     *             @OA\Property(property="token_type", type="string", example="Bearer"),
+     *             @OA\Property(property="expires_in", type="integer", example=172800, description="Token expiration in minutes"),
+     *             @OA\Property(property="user", ref="#/components/schemas/User")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+
+        // Check if user account is still active
+        if (!$user->isActive()) {
+            return response()->json([
+                'message' => 'Account is not active. Please contact administrator.'
+            ], 403);
+        }
+
+        // Revoke current token and create a new one
+        $currentTokenId = $request->user()->currentAccessToken()->id;
+        $user->tokens()->where('id', $currentTokenId)->delete();
+
+        // Create new token with fresh expiration (4 months)
+        $newToken = $user->createToken(
+            'academia-world-token',
+            ['*'],
+            now()->addMonths(4)
+        );
+
+        return response()->json([
+            'message' => 'Token refreshed successfully',
+            'access_token' => $newToken->plainTextToken,
+            'token_type' => 'Bearer',
+            'expires_in' => 60 * 24 * 120, // 4 months in minutes
+            'user' => [
+                'uuid' => $user->uuid,
+                'name' => $user->full_name,
+                'email' => $user->email,
+                'institution' => $user->institution,
+                'department' => $user->department,
+                'position' => $user->position,
+                'account_status' => $user->account_status,
+                'is_admin' => $user->isAdmin()
+            ]
         ]);
     }
 
@@ -520,46 +602,52 @@ class AuthController extends Controller
      */
     public function verifyEmail(Request $request): JsonResponse
     {
-        $request->validate([
-            'token' => 'required|string',
-            'email' => 'required|email',
-        ]);
+      $request->validate([
+        'token' => 'required|string',
+      ]);
 
-        /** @phpstan-ignore-next-line */
-        $verificationToken = EmailVerificationToken::where('token', $request->token)
-            ->where('email', $request->email)
-            ->first();
+      /** @phpstan-ignore-next-line */
+      $verificationToken = EmailVerificationToken::where('token', $request->token)->first();
 
-        if (!$verificationToken) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid or expired verification token'
-            ], 400);
-        }
-
-        if ($verificationToken->expires_at < now()) {
-            $verificationToken->delete();
-            return response()->json([
-                'success' => false,
-                'message' => 'Verification token has expired'
-            ], 400);
-        }
-
-        $user = User::where('email', $request->email)->first();
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found'
-            ], 400);
-        }
-
-        $user->markEmailAsVerified();
-        $verificationToken->delete();
-
+      if (!$verificationToken) {
         return response()->json([
-            'success' => true,
-            'message' => 'Email verified successfully'
-        ]);
+          'success' => false,
+          'message' => 'Invalid or expired verification token'
+        ], 400);
+      }
+
+      if ($verificationToken->expires_at < now()) {
+        $verificationToken->delete();
+        return response()->json([
+          'success' => false,
+          'message' => 'Verification token has expired'
+        ], 400);
+      }
+
+      $user = User::where('email', $verificationToken->email)->first();
+      if (!$user) {
+        $verificationToken->delete();
+        return response()->json([
+          'success' => false,
+          'message' => 'User not found'
+        ], 400);
+      }
+
+      if ($user->email_verified_at) {
+        $verificationToken->delete();
+        return response()->json([
+          'success' => false,
+          'message' => 'Email is already verified'
+        ], 400);
+      }
+
+      $user->markEmailAsVerified();
+      $verificationToken->delete();
+
+      return response()->json([
+        'success' => true,
+        'message' => 'Email verified successfully'
+      ]);
     }
 
     /**
@@ -656,9 +744,15 @@ class AuthController extends Controller
             ['token' => $token]
         );
 
-        // Send email
+        // Send email synchronously for testing
         Mail::to($user->email)->queue(
-            new EmailVerification($user, $verificationUrl)
+            new EmailVerification([
+                'id' => $user->id,
+                'name' => $user->full_name,
+                'email' => $user->email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+            ], $verificationUrl)
         );
     }
 }

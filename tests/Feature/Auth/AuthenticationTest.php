@@ -340,4 +340,103 @@ class AuthenticationTest extends TestCase
             'message' => 'User not found'
         ]);
     }
+
+    #[Test]
+    public function refresh_token_works_correctly()
+    {
+        $user = User::factory()->create([
+            'email' => 'test@example.com',
+            'password' => Hash::make('password'),
+            'account_status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+
+        // Login to get initial token
+        $loginResponse = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ], $this->getApiHeaders());
+
+        $loginResponse->assertStatus(200);
+        $oldToken = $loginResponse->json('access_token');
+        $this->assertNotNull($oldToken);
+
+        // Use the token to refresh
+        $refreshResponse = $this->postJson('/api/v1/auth/refresh', [], [
+            'Authorization' => 'Bearer ' . $oldToken,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ]);
+
+        $refreshResponse->assertStatus(200);
+        $refreshResponse->assertJsonStructure([
+            'message',
+            'access_token',
+            'token_type',
+            'expires_in',
+        ]);
+
+        $newToken = $refreshResponse->json('access_token');
+        $this->assertNotNull($newToken);
+        $this->assertNotEquals($oldToken, $newToken);
+
+        // Verify the new token works
+        $profileResponse = $this->getJson('/api/v1/auth/user', [
+            'Authorization' => 'Bearer ' . $newToken,
+            'Accept' => 'application/json',
+        ]);
+
+        $profileResponse->assertStatus(200);
+        $profileResponse->assertJson([
+            'user' => [
+                'uuid' => $user->uuid,
+                'email' => $user->email,
+            ]
+        ]);
+
+        // Verify the old token no longer works
+        $oldTokenProfileResponse = $this->getJson('/api/v1/auth/user', [
+            'Authorization' => 'Bearer ' . $oldToken,
+            'Accept' => 'application/json',
+        ]);
+
+        $oldTokenProfileResponse->assertStatus(401);
+    }
+
+    #[Test]
+    public function refresh_token_fails_without_authentication()
+    {
+        $response = $this->postJson('/api/v1/auth/refresh', [], $this->getApiHeaders());
+
+        $response->assertStatus(401);
+        $response->assertJson([
+            'message' => 'Unauthenticated.'
+        ]);
+    }
+
+    #[Test]
+    public function token_expiration_is_set_correctly()
+    {
+        $user = User::factory()->create([
+            'email' => 'test@example.com',
+            'password' => Hash::make('password'),
+            'account_status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ], $this->getApiHeaders());
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'access_token',
+            'expires_in'
+        ]);
+
+        // Verify expires_in is 4 months (in minutes)
+        $expiresIn = $response->json('expires_in');
+        $this->assertEquals(60 * 24 * 120, $expiresIn); // 4 months in minutes
+    }
 }

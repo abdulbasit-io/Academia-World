@@ -19,7 +19,7 @@ class EmailTest extends TestCase
         $user = User::factory()->create();
         $verificationUrl = 'https://example.com/verify?token=test-token';
 
-        $mail = new EmailVerification($user, $verificationUrl);
+        $mail = new EmailVerification($user->toArray(), $verificationUrl);
 
         $this->assertEquals('Verify Your Email Address - Academia World', $mail->envelope()->subject);
         $this->assertEquals('emails.auth.verification', $mail->content()->markdown);
@@ -35,10 +35,10 @@ class EmailTest extends TestCase
         ]);
         $verificationUrl = 'https://example.com/verify?token=test-token';
 
-        $mail = new EmailVerification($user, $verificationUrl);
+        $mail = new EmailVerification($user->toArray(), $verificationUrl);
         $content = $mail->content();
 
-        $this->assertEquals($user, $content->with['user']);
+        $this->assertEquals($user->toArray(), $content->with['user']);
         $this->assertEquals($verificationUrl, $content->with['verificationUrl']);
     }
 
@@ -160,7 +160,7 @@ class EmailTest extends TestCase
         $event = Event::factory()->create(['host_id' => $host->id]);
 
         $emails = [
-            new EmailVerification($user, 'https://example.com'),
+            new EmailVerification($user->toArray(), 'https://example.com'),
             new EventRegistrationConfirmation($user, $event),
             new EventReminder($user, $event),
             new AdminEventNotification($event, 'new_event')
@@ -179,7 +179,7 @@ class EmailTest extends TestCase
         $event = Event::factory()->create(['host_id' => $host->id]);
 
         // Email verification should be high priority
-        $emailVerification = new EmailVerification($user, 'https://example.com');
+        $emailVerification = new EmailVerification($user->toArray(), 'https://example.com');
         $emailVerification->onQueue('high');
         $this->assertEquals('high', $emailVerification->queue);
 
@@ -197,7 +197,7 @@ class EmailTest extends TestCase
         $event = Event::factory()->create(['host_id' => $host->id]);
 
         $emails = [
-            new EmailVerification($user, 'https://example.com'),
+            new EmailVerification($user->toArray(), 'https://example.com'),
             new EventRegistrationConfirmation($user, $event),
             new EventReminder($user, $event),
             new AdminEventNotification($event, 'new_event')

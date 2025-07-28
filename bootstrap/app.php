@@ -19,11 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'log.api' => \App\Http\Middleware\LogApiRequests::class,
         ]);
         
         // Enable CORS for API routes
         $middleware->group('api', [
             \Illuminate\Http\Middleware\HandleCors::class,
+            \App\Http\Middleware\LogApiRequests::class, // Add API logging
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);

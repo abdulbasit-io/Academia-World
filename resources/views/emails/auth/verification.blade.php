@@ -1,7 +1,7 @@
 <x-mail::message>
 # Email Verification Required
 
-Hello {{ $user->full_name }},
+Hello {{ $user->name }},
 
 Welcome to **Academia World**! To complete your registration and start using the platform, please verify your email address.
 

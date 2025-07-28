@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -14,10 +13,14 @@ class EmailVerification extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
-    public function __construct(
-        public User $user,
-        public string $verificationUrl
-    ) {}
+    public array $userData;
+    public string $verificationUrl;
+
+    public function __construct(array $userData, string $verificationUrl)
+    {
+        $this->userData = $userData;
+        $this->verificationUrl = $verificationUrl;
+    }
 
     public function envelope(): Envelope
     {
@@ -31,7 +34,7 @@ class EmailVerification extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'emails.auth.verification',
             with: [
-                'user' => $this->user,
+                'user' => (object) $this->userData,
                 'verificationUrl' => $this->verificationUrl,
             ],
         );

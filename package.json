@@ -4,7 +4,14 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "start": "concurrently \"./start-dev.sh start\" \"npm run dev\"",
+        "start:api": "./start-dev.sh start",
+        "start:workers": "./start-dev.sh workers",
+        "stop": "./start-dev.sh stop",
+        "status": "./start-dev.sh status",
+        "logs": "./start-dev.sh logs",
+        "restart": "./start-dev.sh restart"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

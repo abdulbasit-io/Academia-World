@@ -1,0 +1,20 @@
+[Unit]
+Description=Academia World Queue Workers
+After=network.target mysql.service
+
+[Service]
+Type=forking
+User=abdulbasit
+Group=abdulbasit
+WorkingDirectory=/home/abdulbasit/academia-world
+ExecStart=/home/abdulbasit/academia-world/artisan workers:start
+ExecStop=/home/abdulbasit/academia-world/artisan workers:start --stop
+ExecReload=/home/abdulbasit/academia-world/artisan workers:start --restart
+Restart=always
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=academia-world-workers
+
+[Install]
+WantedBy=multi-user.target
