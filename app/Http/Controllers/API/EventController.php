@@ -572,17 +572,17 @@ class EventController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/events/{id}/unregister",
+     *     path="/api/v1/events/{event}/unregister",
      *     tags={"Events"},
      *     summary="Unregister from an event",
      *     description="Remove user registration from a specific event",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
+     *         description="Event UUID",
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -732,17 +732,17 @@ class EventController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/events/{id}/attendees",
+     *     path="/api/v1/events/{event}/attendees",
      *     tags={"Events"},
      *     summary="Get event attendees",
      *     description="Retrieve list of event attendees (only for event host)",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
+     *         description="Event UUID",
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -799,17 +799,17 @@ class EventController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/admin/events/{id}/ban",
+     *     path="/api/v1/admin/events/{event}/ban",
      *     tags={"Admin"},
      *     summary="Ban an event (Admin only)",
      *     description="Ban an event with reason (admin access required)",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
-     *         name="id",
+     *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
+     *         description="Event UUID",
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
