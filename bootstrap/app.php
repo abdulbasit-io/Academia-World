@@ -14,12 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \App\Http\Middleware\CookieBasedSanctum::class,
         ]);
         
         $middleware->alias([
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'log.api' => \App\Http\Middleware\LogApiRequests::class,
+            'cookie.auth' => \App\Http\Middleware\CookieBasedSanctum::class,
         ]);
         
         // Enable CORS for API routes

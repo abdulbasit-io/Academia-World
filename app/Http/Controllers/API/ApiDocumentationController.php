@@ -29,7 +29,15 @@ use App\Http\Controllers\Controller;
  *     type="http",
  *     scheme="bearer",
  *     bearerFormat="JWT",
- *     description="Laravel Sanctum token authentication"
+ *     description="Laravel Sanctum token authentication via Bearer token"
+ * )
+ *
+ * @OA\SecurityScheme(
+ *     securityScheme="cookieAuth",
+ *     type="apiKey",
+ *     in="cookie",
+ *     name="academia_world_token",
+ *     description="Laravel Sanctum token authentication via HTTP-only cookie. The token is automatically set on successful login and used for subsequent requests."
  * )
  *
  * @OA\Schema(

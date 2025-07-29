@@ -146,7 +146,7 @@ class AuthController extends Controller
      *     path="/api/v1/auth/login",
      *     tags={"Authentication"},
      *     summary="User login",
-     *     description="Authenticate user and return access token",
+     *     description="Authenticate user and return access token. Also sets an HTTP-only cookie for automatic authentication in subsequent requests.",
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -157,13 +157,18 @@ class AuthController extends Controller
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Login successful",
+     *         description="Login successful. Access token returned in response body and also set as HTTP-only cookie 'academia_world_token'.",
      *         @OA\JsonContent(
      *             @OA\Property(property="message", type="string", example="Login successful"),
      *             @OA\Property(property="access_token", type="string", example="1|TOKEN_HERE"),
      *             @OA\Property(property="token_type", type="string", example="Bearer"),
      *             @OA\Property(property="expires_in", type="integer", example=172800, description="Token expiration in minutes"),
      *             @OA\Property(property="user", ref="#/components/schemas/User")
+     *         ),
+     *         @OA\Header(
+     *             header="Set-Cookie",
+     *             description="HTTP-only authentication cookie",
+     *             @OA\Schema(type="string", example="academia_world_token=1|TOKEN_HERE; Path=/; HttpOnly; SameSite=Lax")
      *         )
      *     ),
      *     @OA\Response(
@@ -229,7 +234,8 @@ class AuthController extends Controller
             now()->addMonths(4)
         )->plainTextToken;
 
-        return response()->json([
+        // Create response with cookie
+        $response = response()->json([
             'message' => 'Login successful',
             'access_token' => $token,
             'token_type' => 'Bearer',
@@ -245,6 +251,21 @@ class AuthController extends Controller
                 'is_admin' => $user->isAdmin()
             ]
         ]);
+
+        // Set HTTP-only cookie with the token
+        $response->withCookie(cookie(
+            'academia_world_token',
+            $token,
+            60 * 24 * 120, // 4 months in minutes
+            '/',
+            null,
+            true, // secure (HTTPS only in production)
+            true, // httpOnly
+            false, // raw
+            'Lax' // sameSite
+        ));
+
+        return $response;
     }
 
     /**
@@ -254,8 +275,8 @@ class AuthController extends Controller
      *     path="/api/v1/auth/user",
      *     tags={"Authentication"},
      *     summary="Get current user",
-     *     description="Get current authenticated user information",
-     *     security={{"sanctum":{}}},
+     *     description="Get current authenticated user information. Authentication can be provided via Bearer token or HTTP-only cookie.",
+     *     security={{"sanctum":{}}, {"cookieAuth":{}}},
      *     @OA\Response(
      *         response=200,
      *         description="User information retrieved successfully",
@@ -347,9 +368,15 @@ class AuthController extends Controller
         
         $user->tokens()->delete();
 
-        return response()->json([
+        // Create response and clear the cookie
+        $response = response()->json([
             'message' => 'Logged out successfully'
         ]);
+
+        // Clear the authentication cookie
+        $response->withCookie(cookie()->forget('academia_world_token'));
+
+        return $response;
     }
 
     /**
@@ -408,7 +435,8 @@ class AuthController extends Controller
             now()->addMonths(4)
         );
 
-        return response()->json([
+        // Create response with new token
+        $response = response()->json([
             'message' => 'Token refreshed successfully',
             'access_token' => $newToken->plainTextToken,
             'token_type' => 'Bearer',
@@ -424,6 +452,21 @@ class AuthController extends Controller
                 'is_admin' => $user->isAdmin()
             ]
         ]);
+
+        // Update the authentication cookie with new token
+        $response->withCookie(cookie(
+            'academia_world_token',
+            $newToken->plainTextToken,
+            60 * 24 * 120, // 4 months in minutes
+            '/',
+            null,
+            true, // secure (HTTPS only in production)
+            true, // httpOnly
+            false, // raw
+            'Lax' // sameSite
+        ));
+
+        return $response;
     }
 
     /**
