@@ -102,7 +102,9 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Events retrieved successfully',
-            'data' => $events->items(),
+            'data' => collect($events->items())->map(function($event) {
+                return $this->transformEventData($event);
+            }),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),
@@ -207,7 +209,7 @@ class EventController extends Controller
 
             return response()->json([
                 'message' => 'Event created and published successfully!',
-                'data' => $event->load('host:id,first_name,last_name,institution')
+                'data' => $this->transformEventData($event->load('host'))
             ], 201);
 
         } catch (\Exception $e) {
@@ -266,7 +268,7 @@ class EventController extends Controller
         return response()->json([
             'message' => 'Event retrieved successfully',
             'data' => [
-                'event' => $event,
+                'event' => $this->transformEventData($event),
                 'registration_count' => $event->registrations->count(),
                 'available_spots' => $event->available_spots,
                 'is_full' => $event->is_full,
@@ -375,7 +377,7 @@ class EventController extends Controller
 
             return response()->json([
                 'message' => 'Event updated successfully',
-                'data' => $event->fresh(['host:id,first_name,last_name,institution'])
+                'data' => $this->transformEventData($event->fresh(['host']))
             ]);
 
         } catch (\Exception $e) {
@@ -662,7 +664,9 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Your events retrieved successfully',
-            'data' => $events->items(),
+            'data' => collect($events->items())->map(function($event) {
+                return $this->transformEventData($event);
+            }),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),
@@ -714,7 +718,9 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Your registrations retrieved successfully',
-            'data' => $events->items(),
+            'data' => collect($events->items())->map(function($event) {
+                return $this->transformEventData($event);
+            }),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),
@@ -771,12 +777,22 @@ class EventController extends Controller
 
         $attendees = $event->registrations()
             ->wherePivot('status', 'registered')
-            ->select(['users.id', 'first_name', 'last_name', 'email', 'institution', 'position'])
+            ->select(['users.uuid', 'first_name', 'last_name', 'email', 'institution', 'position'])
             ->get();
 
         return response()->json([
             'message' => 'Attendees retrieved successfully',
-            'data' => $attendees,
+            'data' => $attendees->map(function($attendee) {
+                return [
+                    'uuid' => $attendee->uuid,
+                    'first_name' => $attendee->first_name,
+                    'last_name' => $attendee->last_name,
+                    'full_name' => $attendee->first_name . ' ' . $attendee->last_name,
+                    'email' => $attendee->email,
+                    'institution' => $attendee->institution,
+                    'position' => $attendee->position,
+                ];
+            }),
             'total_count' => $attendees->count()
         ]);
     }
@@ -858,7 +874,7 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Event banned successfully',
-            'data' => $event->fresh()
+            'data' => $this->transformEventData($event->fresh())
         ]);
     }
 
@@ -920,7 +936,7 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Event unbanned successfully',
-            'data' => $event->fresh()
+            'data' => $this->transformEventData($event->fresh())
         ]);
     }
 
@@ -1227,7 +1243,9 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Search results retrieved successfully',
-            'data' => $events->items(),
+            'data' => collect($events->items())->map(function($event) {
+                return $this->transformEventData($event);
+            }),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),
@@ -1236,5 +1254,47 @@ class EventController extends Controller
             ],
             'facets' => $facets
         ]);
+    }
+
+    /**
+     * Transform event data to exclude sensitive fields like id
+     */
+    private function transformEventData($event): array
+    {
+        $data = [
+            'uuid' => $event->uuid,
+            'title' => $event->title,
+            'description' => $event->description,
+            'start_date' => $event->start_date,
+            'end_date' => $event->end_date,
+            'timezone' => $event->timezone,
+            'location_type' => $event->location_type,
+            'location' => $event->location,
+            'virtual_link' => $event->virtual_link,
+            'capacity' => $event->capacity,
+            'poster' => $event->poster ? Storage::url($event->poster) : null,
+            'agenda' => $event->agenda,
+            'tags' => $event->tags,
+            'status' => $event->status,
+            'visibility' => $event->visibility,
+            'requirements' => $event->requirements,
+            'created_at' => $event->created_at,
+            'updated_at' => $event->updated_at,
+        ];
+
+        // Include host data if loaded, but exclude host ID
+        if ($event->relationLoaded('host') && $event->host) {
+            $data['host'] = [
+                'uuid' => $event->host->uuid,
+                'first_name' => $event->host->first_name,
+                'last_name' => $event->host->last_name,
+                'full_name' => $event->host->full_name,
+                'institution' => $event->host->institution,
+                'department' => $event->host->department,
+                'position' => $event->host->position,
+            ];
+        }
+
+        return $data;
     }
 }

@@ -63,7 +63,33 @@ class AdminController extends Controller
 
         return response()->json([
             'message' => 'Users retrieved successfully',
-            'data' => $users,
+            'data' => $users->map(function($user) {
+                return [
+                    'uuid' => $user->uuid,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'full_name' => $user->full_name,
+                    'email' => $user->email,
+                    'institution' => $user->institution,
+                    'department' => $user->department,
+                    'position' => $user->position,
+                    'account_status' => $user->account_status,
+                    'is_admin' => $user->is_admin,
+                    'is_banned' => $user->is_banned,
+                    'ban_reason' => $user->ban_reason,
+                    'banned_at' => $user->banned_at,
+                    'email_verified_at' => $user->email_verified_at,
+                    'last_login_at' => $user->last_login_at,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+            ]
         ]);
     }
 
@@ -269,7 +295,33 @@ class AdminController extends Controller
 
         return response()->json([
             'message' => 'Admin logs retrieved successfully',
-            'data' => $logs,
+            'data' => $logs->map(function($log) {
+                return [
+                    'uuid' => $log->uuid,
+                    'action' => $log->action,
+                    'target_type' => $log->target_type,
+                    'target_id' => $log->target_id,
+                    'description' => $log->description,
+                    'changes' => $log->changes,
+                    'metadata' => $log->metadata,
+                    'ip_address' => $log->ip_address,
+                    'severity' => $log->severity,
+                    'admin' => $log->admin ? [
+                        'uuid' => $log->admin->uuid,
+                        'first_name' => $log->admin->first_name,
+                        'last_name' => $log->admin->last_name,
+                        'email' => $log->admin->email,
+                    ] : null,
+                    'created_at' => $log->created_at,
+                    'updated_at' => $log->updated_at,
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $logs->currentPage(),
+                'last_page' => $logs->lastPage(),
+                'per_page' => $logs->perPage(),
+                'total' => $logs->total(),
+            ]
         ]);
     }
 

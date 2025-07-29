@@ -189,7 +189,16 @@ class ResourceController extends Controller
         $user = $request->user();
         
         // Check permissions - only event host or admin can upload
-        if (!$user || ($user->id !== $event->host_id && !$user->isAdmin())) {
+        if (!$user) {
+            return response()->json([
+                'message' => 'You are not authorized to upload resources for this event'
+            ], 403);
+        }
+        
+        $isEventHost = $user->id === $event->host_id;
+        $isAdmin = $user->isAdmin();
+        
+        if (!$isEventHost && !$isAdmin) {
             return response()->json([
                 'message' => 'You are not authorized to upload resources for this event'
             ], 403);

@@ -79,7 +79,32 @@ class ForumPostController extends Controller
 
         return response()->json([
             'message' => 'Posts retrieved successfully',
-            'data' => $posts->items(),
+            'data' => collect($posts->items())->map(function($post) {
+                return [
+                    'uuid' => $post->uuid,
+                    'content' => $post->content,
+                    'likes_count' => $post->likes_count,
+                    'replies_count' => $post->replies_count,
+                    'edited_at' => $post->edited_at,
+                    'created_at' => $post->created_at,
+                    'updated_at' => $post->updated_at,
+                    'user' => $post->user ? [
+                        'uuid' => $post->user->uuid,
+                        'name' => $post->user->name,
+                    ] : null,
+                    'replies' => $post->replies->map(function($reply) {
+                        return [
+                            'uuid' => $reply->uuid,
+                            'content' => $reply->content,
+                            'created_at' => $reply->created_at,
+                            'user' => $reply->user ? [
+                                'uuid' => $reply->user->uuid,
+                                'name' => $reply->user->name,
+                            ] : null,
+                        ];
+                    }),
+                ];
+            }),
             'pagination' => [
                 'current_page' => $posts->currentPage(),
                 'last_page' => $posts->lastPage(),

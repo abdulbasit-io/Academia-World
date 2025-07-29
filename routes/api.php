@@ -27,7 +27,7 @@ use App\Http\Controllers\API\AnalyticsController;
 Route::prefix('v1')->group(function () {
     // Authentication routes
     Route::post('auth/register', [AuthController::class, 'register']);
-    Route::post('auth/login', [AuthController::class, 'login']);
+    Route::post('auth/login', [AuthController::class, 'login'])->name('login');
     Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('auth/verify-email', [AuthController::class, 'verifyEmail']);
@@ -45,7 +45,7 @@ Route::prefix('v1')->group(function () {
 });
 
 // Protected routes
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+Route::prefix('v1')->middleware(['cookie.auth', 'auth:sanctum'])->group(function () {
     // Authentication routes
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/user', [AuthController::class, 'user']);
@@ -96,8 +96,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::delete('connections/{connection}', [UserConnectionController::class, 'destroy']);
     Route::get('users/search', [UserConnectionController::class, 'searchUsers']);
     
-        // Admin routes
-    Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    // Admin routes
+    Route::middleware(['cookie.auth', 'auth:sanctum', 'admin'])->prefix('admin')->group(function () {
         // Dashboard & Analytics
         Route::get('dashboard', [AdminController::class, 'dashboard']);
         Route::get('analytics/overview', [AnalyticsController::class, 'overview']);

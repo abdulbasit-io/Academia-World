@@ -19,12 +19,7 @@ class CookieBasedSanctum
      */
     public function handle(Request $request, Closure $next)
     {
-        // First, try the standard Sanctum authentication (Bearer token)
-        if ($request->bearerToken()) {
-            return $this->handleBearerToken($request, $next);
-        }
-
-        // If no bearer token, try cookie-based authentication
+        // Only support cookie-based authentication
         if ($token = $request->cookie('academia_world_token')) {
             return $this->handleCookieToken($request, $next, $token);
         }
@@ -39,30 +34,21 @@ class CookieBasedSanctum
     }
 
     /**
-     * Handle Bearer token authentication
+     * Handle cookie-based authentication
      */
-    protected function handleBearerToken(Request $request, Closure $next)
+    private function handleCookieToken(Request $request, Closure $next, string $token)
     {
-        $token = PersonalAccessToken::findToken($request->bearerToken());
+        // Find the token in the database
+        $accessToken = PersonalAccessToken::findToken($token);
 
-        if ($token && $this->isValidToken($token)) {
-            Auth::guard('sanctum')->setUser($token->tokenable);
-            $request->attributes->set('sanctum_token', $token);
-        }
-
-        return $next($request);
-    }
-
-    /**
-     * Handle Cookie token authentication
-     */
-    protected function handleCookieToken(Request $request, Closure $next, string $tokenString)
-    {
-        $token = PersonalAccessToken::findToken($tokenString);
-
-        if ($token && $this->isValidToken($token)) {
-            Auth::guard('sanctum')->setUser($token->tokenable);
-            $request->attributes->set('sanctum_token', $token);
+        if ($accessToken && !$accessToken->cant('*')) {
+            // Set the token for the request
+            $request->setUserResolver(function () use ($accessToken) {
+                return $accessToken->tokenable->withAccessToken($accessToken);
+            });
+            
+            // Also set the user for Laravel's Auth system
+            Auth::setUser($accessToken->tokenable);
         }
 
         return $next($request);

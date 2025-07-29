@@ -218,7 +218,29 @@ class UserController extends Controller
 
             return response()->json([
                 'message' => 'Profile updated successfully',
-                'data' => $user->fresh()
+                'data' => [
+                    'uuid' => $user->uuid,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'full_name' => $user->full_name,
+                    'email' => $user->email,
+                    'institution' => $user->institution,
+                    'department' => $user->department,
+                    'position' => $user->position,
+                    'bio' => $user->bio,
+                    'website' => $user->website,
+                    'phone' => $user->phone,
+                    'avatar' => $user->avatar ? Storage::url($user->avatar) : null,
+                    'social_links' => $user->social_links,
+                    'account_status' => $user->account_status,
+                    'is_admin' => $user->isAdmin(),
+                    'hosted_events_count' => $user->hostedEvents()->count(),
+                    'registered_events_count' => $user->registeredEvents()->count(),
+                    'email_verified_at' => $user->email_verified_at,
+                    'last_login_at' => $user->last_login_at,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -249,7 +271,7 @@ class UserController extends Controller
      *             @OA\Schema(
      *                 @OA\Property(
      *                     property="avatar",
-     *                     type="string",
+    *                     type="string",
      *                     format="binary",
      *                     description="Avatar image file (JPEG, PNG, JPG, GIF, max 2MB)"
      *                 )

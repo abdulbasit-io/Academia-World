@@ -66,7 +66,7 @@ start_workers() {
     # Start queue workers in background
     cd "$PROJECT_DIR"
     
-    # Worker 1
+    # Worker 1 - General queue processing
     nohup php artisan queue:work database \
         --sleep=3 \
         --tries=3 \
@@ -75,7 +75,7 @@ start_workers() {
         --name=worker-1 \
         > "$LOG_DIR/queue-worker-1.log" 2>&1 &
     
-    # Worker 2 for redundancy
+    # Worker 2 - General queue processing for redundancy
     nohup php artisan queue:work database \
         --sleep=3 \
         --tries=3 \
@@ -83,6 +83,16 @@ start_workers() {
         --memory=512 \
         --name=worker-2 \
         > "$LOG_DIR/queue-worker-2.log" 2>&1 &
+    
+    # Worker 3 - Dedicated Telescope queue worker
+    nohup php artisan queue:work database \
+        --queue=telescope \
+        --sleep=1 \
+        --tries=3 \
+        --max-time=3600 \
+        --memory=256 \
+        --name=telescope-worker \
+        > "$LOG_DIR/telescope-worker.log" 2>&1 &
     
     sleep 2
     
