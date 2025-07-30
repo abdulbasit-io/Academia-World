@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Jobs\SendAdminNotification;
 use App\Jobs\SendEventReminder;
 use App\Mail\EventRegistrationConfirmation;
+use App\Services\AnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -23,6 +24,10 @@ use Illuminate\Support\Facades\Mail;
  */
 class EventController extends Controller
 {
+    public function __construct(private AnalyticsService $analyticsService)
+    {
+        // Constructor injection for AnalyticsService
+    }
     /**
      * @OA\Get(
      *     path="/api/v1/events",
@@ -57,6 +62,13 @@ class EventController extends Controller
      *         required=false,
      *         @OA\Schema(type="string", format="date")
      *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, default=1)
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Events retrieved successfully",
@@ -70,7 +82,7 @@ class EventController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Event::with(['host:id,first_name,last_name,institution'])
+        $query = Event::with(['host:id,uuid,first_name,last_name,institution'])
             ->published()
             ->public()
             ->upcoming();
@@ -201,6 +213,19 @@ class EventController extends Controller
             // Send admin notification for new event
             SendAdminNotification::dispatch($event, 'new_event');
 
+            // Track event creation analytics
+            $this->analyticsService->trackEngagement('event_creation', [
+                'entity_type' => 'event',
+                'entity_id' => $event->id,
+                'metadata' => [
+                    'event_title' => $event->title,
+                    'event_status' => $event->status,
+                    'location_type' => $event->location_type,
+                    'visibility' => $event->visibility,
+                    'has_capacity_limit' => !is_null($event->capacity),
+                ]
+            ]);
+
             Log::info('Event created successfully', [
                 'event_id' => $event->id,
                 'host_id' => Auth::id(),
@@ -258,11 +283,22 @@ class EventController extends Controller
         }
 
         $event->load([
-            'host:id,first_name,last_name,institution,department,position',
+            'host:id,uuid,first_name,last_name,institution,department,position',
             'registrations' => function($query) {
-                $query->where('status', 'registered')
-                      ->with('user:id,first_name,last_name,institution');
+                $query->wherePivot('status', 'registered')
+                      ->select('users.id', 'users.uuid', 'users.first_name', 'users.last_name', 'users.institution');
             }
+        ]);
+
+        // Track event view analytics
+        $this->analyticsService->trackEngagement('event_view', [
+            'entity_type' => 'event',
+            'entity_id' => $event->id,
+            'metadata' => [
+                'event_title' => $event->title,
+                'event_status' => $event->status,
+                'location_type' => $event->location_type,
+            ]
         ]);
 
         return response()->json([
@@ -374,10 +410,11 @@ class EventController extends Controller
             }
 
             $event->update($data);
+            $event->load('host:id,uuid,first_name,last_name,institution,department,position');
 
             return response()->json([
                 'message' => 'Event updated successfully',
-                'data' => $this->transformEventData($event->fresh(['host']))
+                'data' => $this->transformEventData($event)
             ]);
 
         } catch (\Exception $e) {
@@ -552,6 +589,18 @@ class EventController extends Controller
             // Send notification to admins
             SendAdminNotification::dispatch($event, 'new_registration', $user);
 
+            // Track event registration analytics
+            $this->analyticsService->trackEngagement('event_registration', [
+                'entity_type' => 'event',
+                'entity_id' => $event->id,
+                'metadata' => [
+                    'event_title' => $event->title,
+                    'event_status' => $event->status,
+                    'location_type' => $event->location_type,
+                    'registration_status' => 'registered',
+                ]
+            ]);
+
             Log::info('User registered for event', [
                 'user_id' => $user->id,
                 'event_id' => $event->id,
@@ -618,6 +667,18 @@ class EventController extends Controller
         try {
             $event->registrations()->detach(Auth::id());
 
+            // Track event unregistration analytics
+            $this->analyticsService->trackEngagement('event_unregistration', [
+                'entity_type' => 'event',
+                'entity_id' => $event->id,
+                'metadata' => [
+                    'event_title' => $event->title,
+                    'event_status' => $event->status,
+                    'location_type' => $event->location_type,
+                    'registration_status' => 'unregistered',
+                ]
+            ]);
+
             return response()->json([
                 'message' => 'Successfully unregistered from the event'
             ]);
@@ -637,6 +698,13 @@ class EventController extends Controller
      *     summary="Get user's hosted events",
      *     description="Retrieve all events hosted by the authenticated user",
      *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, default=1)
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="User events retrieved successfully",
@@ -657,7 +725,7 @@ class EventController extends Controller
     {
         $events = Event::where('host_id', Auth::id())
             ->with(['registrations' => function($query) {
-                $query->where('status', 'registered');
+                $query->wherePivot('status', 'registered');
             }])
             ->orderBy('start_date', 'desc')
             ->paginate(10);
@@ -683,6 +751,13 @@ class EventController extends Controller
      *     summary="Get user's event registrations",
      *     description="Retrieve all events the authenticated user has registered for",
      *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, default=1)
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="User registrations retrieved successfully",
@@ -712,7 +787,7 @@ class EventController extends Controller
         
         $events = $user->registeredEvents()
             ->wherePivot('status', 'registered')
-            ->with(['host:id,first_name,last_name,institution'])
+            ->with(['host:id,uuid,first_name,last_name,institution'])
             ->orderBy('start_date', 'asc')
             ->paginate(10);
 
@@ -794,204 +869,6 @@ class EventController extends Controller
                 ];
             }),
             'total_count' => $attendees->count()
-        ]);
-    }
-
-    /**
-     * @OA\Post(
-     *     path="/api/v1/admin/events/{event}/ban",
-     *     tags={"Admin"},
-     *     summary="Ban an event (Admin only)",
-     *     description="Ban an event with reason (admin access required)",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="event",
-     *         in="path",
-     *         required=true,
-     *         description="Event UUID",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"reason"},
-     *             @OA\Property(property="reason", type="string", example="Inappropriate content detected")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Event banned successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Event banned successfully"),
-     *             @OA\Property(property="data", ref="#/components/schemas/Event")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Admin access required",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Event not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
-    public function banEvent(Request $request, Event $event): JsonResponse
-    {
-        // Check if event is already banned
-        if ($event->status === 'banned') {
-            return response()->json([
-                'message' => 'Event is already banned'
-            ], 400);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'reason' => 'required|string|max:1000'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $event->update([
-            'status' => 'banned',
-            'ban_reason' => $request->reason,
-            'banned_at' => now(),
-            'banned_by' => Auth::id()
-        ]);
-
-        Log::channel('events')->warning('Event banned by admin', [
-            'event_id' => $event->id,
-            'event_title' => $event->title,
-            'admin_id' => Auth::id(),
-            'reason' => $request->reason
-        ]);
-
-        return response()->json([
-            'message' => 'Event banned successfully',
-            'data' => $this->transformEventData($event->fresh())
-        ]);
-    }
-
-    /**
-     * @OA\Post(
-     *     path="/api/v1/admin/events/{id}/unban",
-     *     tags={"Admin"},
-     *     summary="Unban an event (Admin only)",
-     *     description="Restore a banned event to published status (admin access required)",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Event unbanned successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Event unbanned successfully"),
-     *             @OA\Property(property="data", ref="#/components/schemas/Event")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Admin access required",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Event not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
-    public function unbanEvent(Event $event): JsonResponse
-    {
-        // Check if event is actually banned
-        if ($event->status !== 'banned') {
-            return response()->json([
-                'message' => 'Event is not currently banned'
-            ], 400);
-        }
-
-        $event->update([
-            'status' => 'published',
-            'ban_reason' => null,
-            'banned_at' => null,
-            'banned_by' => null
-        ]);
-
-        Log::channel('events')->info('Event unbanned by admin', [
-            'event_id' => $event->id,
-            'event_title' => $event->title,
-            'admin_id' => Auth::id()
-        ]);
-
-        return response()->json([
-            'message' => 'Event unbanned successfully',
-            'data' => $this->transformEventData($event->fresh())
-        ]);
-    }
-
-    /**
-     * @OA\Delete(
-     *     path="/api/v1/admin/events/{id}/force-delete",
-     *     tags={"Admin"},
-     *     summary="Force delete an event (Admin only)",
-     *     description="Permanently delete an event and all associated data (admin access required)",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Event ID",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Event deleted successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Event permanently deleted")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Admin access required",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Event not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
-    public function forceDelete(Event $event): JsonResponse
-    {
-        $eventTitle = $event->title;
-        $eventId = $event->id;
-
-        // Delete all registrations first
-        $event->registrations()->detach();
-        
-        // Delete the event
-        $event->delete();
-
-        Log::channel('events')->warning('Event force deleted by admin', [
-            'event_id' => $eventId,
-            'event_title' => $eventTitle,
-            'admin_id' => Auth::id()
-        ]);
-
-        return response()->json([
-            'message' => 'Event permanently deleted'
         ]);
     }
 
@@ -1085,6 +962,13 @@ class EventController extends Controller
      *         required=false,
      *         @OA\Schema(type="integer", minimum=1, maximum=50)
      *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, default=1)
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Search results retrieved successfully",
@@ -1127,7 +1011,7 @@ class EventController extends Controller
             ], 422);
         }
 
-        $query = Event::with(['host:id,first_name,last_name,institution'])
+        $query = Event::with(['host:id,uuid,first_name,last_name,institution'])
             ->published()
             ->public()
             ->upcoming();

@@ -29,6 +29,7 @@ check_and_restart_workers() {
         cd "$PROJECT_DIR"
         
         nohup php artisan queue:work database \
+            --queue=emails,default \
             --sleep=3 \
             --tries=3 \
             --max-time=3600 \
@@ -37,6 +38,7 @@ check_and_restart_workers() {
             > "$LOG_DIR/queue-worker-1.log" 2>&1 &
         
         nohup php artisan queue:work database \
+            --queue=emails,default \
             --sleep=3 \
             --tries=3 \
             --max-time=3600 \

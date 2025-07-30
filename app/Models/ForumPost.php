@@ -108,4 +108,29 @@ class ForumPost extends Model
             return ['liked' => true, 'likes_count' => $this->likes_count];
         }
     }
+
+    public function canBeDeletedBy(User $user): bool
+    {
+        // Post author, forum event host, or admin can delete
+        return $this->user_id === $user->id || 
+               $user->is_admin || 
+               $user->id === $this->forum->event->host_id;
+    }
+
+    public function markAsSolution(): void
+    {
+        // First, unmark any existing solution in this thread
+        if ($this->parent_id) {
+            // This is a reply, unmark other replies as solution
+            ForumPost::where('parent_id', $this->parent_id)
+                     ->where('id', '!=', $this->id)
+                     ->update(['is_solution' => false]);
+        } else {
+            // This is a top-level post, unmark its replies as solution
+            $this->replies()->update(['is_solution' => false]);
+        }
+
+        // Mark this post as solution
+        $this->update(['is_solution' => true]);
+    }
 }

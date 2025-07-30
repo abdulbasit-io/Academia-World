@@ -105,22 +105,34 @@ Route::prefix('v1')->middleware(['cookie.auth', 'auth:sanctum'])->group(function
         Route::get('analytics/event-engagement', [AnalyticsController::class, 'eventEngagement']);
         Route::get('analytics/forum-activity', [AnalyticsController::class, 'forumActivity']);
         Route::get('platform-health', [AdminController::class, 'platformHealth']);
-        Route::get('logs', [AdminController::class, 'adminLogs']);
+        Route::get('logs', [AdminController::class, 'logs']);
         
         // User Management
         Route::get('users', [AdminController::class, 'users']);
         Route::post('users', [AdminController::class, 'createAdmin']);
-        Route::put('users/{user}/ban', [AdminController::class, 'toggleUserBan']);
+        Route::put('users/{user}/ban', [AdminController::class, 'banUser']);
         Route::post('users/{user}/promote', [AdminController::class, 'promoteUser']);
         Route::post('users/{user}/demote', [AdminController::class, 'demoteUser']);
         
         // Event Management
         Route::get('events', [AdminController::class, 'events']);
+        Route::get('events/{event}', [AdminController::class, 'showEvent']);
         Route::put('events/{event}/status', [AdminController::class, 'updateEventStatus']);
         Route::delete('events/{event}', [AdminController::class, 'deleteEvent']);
         
         // Content Moderation
-        Route::get('forum-posts', [AdminController::class, 'forumPosts']);
-        Route::delete('forum-posts/{post}', [AdminController::class, 'deleteForumPost']);
+        Route::get('posts', [AdminController::class, 'forumPosts']);
+        Route::delete('posts/{post}', [AdminController::class, 'deleteForumPost']);
+        
+        // Missing Event Management Endpoints
+        Route::post('events/{event}/ban', [AdminController::class, 'banEvent']);
+        Route::post('events/{event}/unban', [AdminController::class, 'unbanEvent']);
+        Route::delete('events/{event}/force-delete', [AdminController::class, 'forceDeleteEvent']);
+        
+        // Missing Analytics Endpoints
+        Route::post('analytics/generate-daily', [AnalyticsController::class, 'generateDaily']);
+        
+        // Platform Health
+        Route::get('platform-health', [AdminController::class, 'platformHealth']);
     });
 });

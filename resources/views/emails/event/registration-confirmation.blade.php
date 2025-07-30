@@ -23,7 +23,7 @@ Thank you for registering for **{{ $event->title }}**! We're excited to have you
 - Check your email for any updates about the event
 - Contact the organizer if you have any questions
 
-<x-mail::button :url="config('app.frontend_url', config('app.url')) . '/events/' . $event->id">
+<x-mail::button :url="config('app.frontend_url', config('app.url')) . '/events/' . $event->uuid">
 View Event Details
 </x-mail::button>
 

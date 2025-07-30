@@ -250,7 +250,7 @@ class ForumController extends Controller
     }
 
     /**
-     * @OA\Patch(
+     * @OA\Put(
      *     path="/api/v1/forums/{forum}",
      *     summary="Update a forum",
      *     description="Updates a forum. Only event hosts and admins can update forums.",

@@ -31,9 +31,9 @@ class ResourceController extends Controller
      *     @OA\Parameter(
      *         name="event",
      *         in="path",
-     *         description="Event ID",
+     *         description="Event UUID",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Parameter(
      *         name="type",
@@ -153,9 +153,9 @@ class ResourceController extends Controller
      *     @OA\Parameter(
      *         name="event",
      *         in="path",
-     *         description="Event ID",
+     *         description="Event UUID",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
@@ -332,7 +332,7 @@ class ResourceController extends Controller
      *         in="path",
      *         description="Resource UUID",
      *         required=true,
-     *         @OA\Schema(type="string")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -414,7 +414,7 @@ class ResourceController extends Controller
      *         in="path",
      *         description="Resource UUID",
      *         required=true,
-     *         @OA\Schema(type="string")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
@@ -522,7 +522,7 @@ class ResourceController extends Controller
      *         in="path",
      *         description="Resource UUID",
      *         required=true,
-     *         @OA\Schema(type="string")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -591,7 +591,7 @@ class ResourceController extends Controller
      *         in="path",
      *         description="Resource UUID",
      *         required=true,
-     *         @OA\Schema(type="string")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,

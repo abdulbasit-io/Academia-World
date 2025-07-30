@@ -121,6 +121,23 @@ class AnalyticsController extends Controller
             ->orderBy('metric_date')
             ->get();
 
+        // If no stored metrics, generate them for the requested period
+        if ($metrics->isEmpty()) {
+            $currentDate = Carbon::parse($startDate);
+            $endDateCarbon = Carbon::parse($endDate);
+            
+            while ($currentDate <= $endDateCarbon) {
+                $this->analyticsService->generateDailyMetrics($currentDate);
+                $currentDate->addDay();
+            }
+            
+            // Fetch the newly generated metrics
+            $metrics = PlatformMetric::ofType('user_engagement')
+                ->dateRange($startDate, $endDate)
+                ->orderBy('metric_date')
+                ->get();
+        }
+
         return response()->json([
             'message' => 'User engagement analytics retrieved successfully',
             'data' => [
@@ -172,10 +189,27 @@ class AnalyticsController extends Controller
         $startDate = $request->input('start_date', now()->subDays(30)->toDateString());
         $endDate = $request->input('end_date', now()->toDateString());
 
-        $metrics = PlatformMetric::ofType('event_engagement')
+        $metrics = PlatformMetric::ofType('event_activity')
             ->dateRange($startDate, $endDate)
             ->orderBy('metric_date')
             ->get();
+
+        // If no stored metrics, generate them for the requested period
+        if ($metrics->isEmpty()) {
+            $currentDate = Carbon::parse($startDate);
+            $endDateCarbon = Carbon::parse($endDate);
+            
+            while ($currentDate <= $endDateCarbon) {
+                $this->analyticsService->generateDailyMetrics($currentDate);
+                $currentDate->addDay();
+            }
+            
+            // Fetch the newly generated metrics
+            $metrics = PlatformMetric::ofType('event_activity')
+                ->dateRange($startDate, $endDate)
+                ->orderBy('metric_date')
+                ->get();
+        }
 
         return response()->json([
             'message' => 'Event engagement analytics retrieved successfully',
@@ -233,6 +267,23 @@ class AnalyticsController extends Controller
             ->orderBy('metric_date')
             ->get();
 
+        // If no stored metrics, generate them for the requested period
+        if ($metrics->isEmpty()) {
+            $currentDate = Carbon::parse($startDate);
+            $endDateCarbon = Carbon::parse($endDate);
+            
+            while ($currentDate <= $endDateCarbon) {
+                $this->analyticsService->generateDailyMetrics($currentDate);
+                $currentDate->addDay();
+            }
+            
+            // Fetch the newly generated metrics
+            $metrics = PlatformMetric::ofType('forum_activity')
+                ->dateRange($startDate, $endDate)
+                ->orderBy('metric_date')
+                ->get();
+        }
+
         return response()->json([
             'message' => 'Forum activity analytics retrieved successfully',
             'data' => [
@@ -282,19 +333,13 @@ class AnalyticsController extends Controller
         $date = $request->input('date', now()->toDateString());
         $carbonDate = Carbon::parse($date);
 
-        $userMetric = $this->analyticsService->generateDailyActiveUsers($carbonDate);
-        $eventMetric = $this->analyticsService->generateEventEngagement($carbonDate);
-        $forumMetric = $this->analyticsService->generateForumActivity($carbonDate);
+        $generatedMetrics = $this->analyticsService->generateDailyMetrics($carbonDate);
 
         return response()->json([
             'message' => 'Daily metrics generated successfully',
             'data' => [
                 'date' => $date,
-                'metrics' => [
-                    'user_engagement' => $userMetric,
-                    'event_engagement' => $eventMetric,
-                    'forum_activity' => $forumMetric,
-                ],
+                'metrics' => $generatedMetrics,
             ],
         ]);
     }
@@ -345,16 +390,18 @@ class AnalyticsController extends Controller
      */
     private function summarizeUserEngagement($metrics): array
     {
-        $totalActiveUsers = $metrics->sum(fn($metric) => $metric->value['count'] ?? 0);
+        $totalActiveUsers = $metrics->sum(fn($metric) => $metric->value['active_users'] ?? 0);
+        $totalNewUsers = $metrics->sum(fn($metric) => $metric->value['new_users'] ?? 0);
         $averageDaily = $metrics->count() > 0 ? round($totalActiveUsers / $metrics->count(), 2) : 0;
-        $peakDay = $metrics->sortByDesc(fn($metric) => $metric->value['count'] ?? 0)->first();
+        $peakDay = $metrics->sortByDesc(fn($metric) => $metric->value['active_users'] ?? 0)->first();
 
         return [
             'total_active_users' => $totalActiveUsers,
+            'total_new_users' => $totalNewUsers,
             'average_daily_active' => $averageDaily,
             'peak_day' => $peakDay ? [
                 'date' => $peakDay->metric_date,
-                'count' => $peakDay->value['count'] ?? 0,
+                'count' => $peakDay->value['active_users'] ?? 0,
             ] : null,
         ];
     }
@@ -364,12 +411,16 @@ class AnalyticsController extends Controller
      */
     private function summarizeEventEngagement($metrics): array
     {
-        $totalEngagement = $metrics->sum(fn($metric) => $metric->value['total'] ?? 0);
-        $averageDaily = $metrics->count() > 0 ? round($totalEngagement / $metrics->count(), 2) : 0;
+        $totalEvents = $metrics->sum(fn($metric) => $metric->value['events_created'] ?? 0);
+        $totalRegistrations = $metrics->sum(fn($metric) => $metric->value['event_registrations'] ?? 0);
+        $totalViews = $metrics->sum(fn($metric) => $metric->value['event_views'] ?? 0);
+        $averageDaily = $metrics->count() > 0 ? round($totalEvents / $metrics->count(), 2) : 0;
 
         return [
-            'total_engagement' => $totalEngagement,
-            'average_daily_engagement' => $averageDaily,
+            'total_events_created' => $totalEvents,
+            'total_registrations' => $totalRegistrations,
+            'total_views' => $totalViews,
+            'average_daily_events' => $averageDaily,
         ];
     }
 
@@ -380,12 +431,77 @@ class AnalyticsController extends Controller
     {
         $totalPosts = $metrics->sum(fn($metric) => $metric->value['posts_created'] ?? 0);
         $totalLikes = $metrics->sum(fn($metric) => $metric->value['likes_given'] ?? 0);
+        $totalActiveUsers = $metrics->sum(fn($metric) => $metric->value['active_forum_users'] ?? 0);
 
         return [
             'total_posts' => $totalPosts,
             'total_likes' => $totalLikes,
+            'total_active_users' => $totalActiveUsers,
             'average_daily_posts' => $metrics->count() > 0 ? round($totalPosts / $metrics->count(), 2) : 0,
             'average_daily_likes' => $metrics->count() > 0 ? round($totalLikes / $metrics->count(), 2) : 0,
         ];
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/admin/analytics/generate-daily",
+     *     summary="Generate daily metrics manually",
+     *     description="Manually trigger the generation of daily analytics metrics for a specific date",
+     *     operationId="generateDailyMetrics",
+     *     tags={"Analytics"},
+     *     @OA\Parameter(
+     *         name="date",
+     *         in="query",
+     *         description="Date to generate metrics for (YYYY-MM-DD format)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date", example="2024-01-15")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Daily metrics generated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Daily metrics generated successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="date", type="string", format="date"),
+     *                 @OA\Property(property="metrics_generated", type="array", @OA\Items(type="string")),
+     *                 @OA\Property(property="user_engagement", type="object"),
+     *                 @OA\Property(property="event_activity", type="object"),
+     *                 @OA\Property(property="forum_metrics", type="object")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Invalid date format or future date",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     */
+    public function generateDaily(Request $request): JsonResponse
+    {
+        $request->validate([
+            'date' => ['required', 'date', 'date_format:Y-m-d', 'before_or_equal:today'],
+        ]);
+
+        $targetDate = Carbon::parse($request->input('date'));
+        
+        // Generate metrics for the specified date
+        $generatedMetrics = $this->analyticsService->generateDailyMetrics($targetDate);
+
+        return response()->json([
+            'message' => 'Daily metrics generated successfully',
+            'data' => [
+                'date' => $targetDate->toDateString(),
+                'metrics_generated' => array_keys($generatedMetrics),
+                'user_engagement' => $generatedMetrics['user_engagement'] ?? [],
+                'event_activity' => $generatedMetrics['event_activity'] ?? [],
+                'forum_metrics' => $generatedMetrics['forum_activity'] ?? [],
+            ],
+        ]);
     }
 }

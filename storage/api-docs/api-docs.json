@@ -20,6 +20,1894 @@
         }
     ],
     "paths": {
+        "/api/v1/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get admin dashboard overview",
+                "description": "Retrieve comprehensive platform statistics and recent activity for admin dashboard",
+                "operationId": "getAdminDashboard",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard data retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin dashboard data retrieved successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total_users": {
+                                                    "description": "Total number of users",
+                                                    "type": "integer"
+                                                },
+                                                "total_events": {
+                                                    "description": "Total number of events",
+                                                    "type": "integer"
+                                                },
+                                                "total_forums": {
+                                                    "description": "Total number of forums",
+                                                    "type": "integer"
+                                                },
+                                                "total_posts": {
+                                                    "description": "Total number of forum posts",
+                                                    "type": "integer"
+                                                },
+                                                "recent_users": {
+                                                    "description": "5 most recent user registrations",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "email": {
+                                                                "type": "string"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "recent_events": {
+                                                    "description": "5 most recent events",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "uuid": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "title": {
+                                                                "type": "string"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "recent_admin_actions": {
+                                                    "description": "10 most recent admin actions",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "admin_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "action": {
+                                                                "type": "string"
+                                                            },
+                                                            "target_type": {
+                                                                "type": "string"
+                                                            },
+                                                            "target_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "description": {
+                                                                "type": "string"
+                                                            },
+                                                            "severity": {
+                                                                "type": "string"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied - Admin privileges required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get all users with filtering",
+                "description": "Retrieve all platform users with filtering and pagination options for admin management",
+                "operationId": "getAdminUsers",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search users by name or email",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_admin",
+                        "in": "query",
+                        "description": "Filter by admin status",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "is_banned",
+                        "in": "query",
+                        "description": "Filter by ban status",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of users per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Users retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Users retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "first_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "full_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "format": "email"
+                                                    },
+                                                    "institution": {
+                                                        "type": "string"
+                                                    },
+                                                    "department": {
+                                                        "type": "string"
+                                                    },
+                                                    "position": {
+                                                        "type": "string"
+                                                    },
+                                                    "account_status": {
+                                                        "type": "string"
+                                                    },
+                                                    "is_admin": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "is_banned": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "ban_reason": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "banned_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true
+                                                    },
+                                                    "email_verified_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true
+                                                    },
+                                                    "last_login_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Create a new admin user",
+                "description": "Create a new user account with admin privileges",
+                "operationId": "createAdmin",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "description": "Full name of the admin",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "description": "Email address (must be unique)",
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 255,
+                                        "example": "admin@university.edu"
+                                    },
+                                    "password": {
+                                        "description": "Password (minimum 8 characters)",
+                                        "type": "string",
+                                        "minLength": 8,
+                                        "example": "SecurePass123"
+                                    },
+                                    "password_confirmation": {
+                                        "description": "Password confirmation",
+                                        "type": "string",
+                                        "example": "SecurePass123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Admin created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin created successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/users/{user}/ban": {
+            "put": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Ban or unban a user",
+                "description": "Ban a user from the platform with a specified reason, or unban if already banned",
+                "operationId": "banUser",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "User UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "reason": {
+                                        "description": "Reason for banning the user",
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "example": "Violating community guidelines"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User banned successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User banned successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Cannot ban admin user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Cannot ban an admin user"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/users/{user}/unban": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Unban a user",
+                "description": "Remove ban from a previously banned user",
+                "operationId": "unbanUser",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "User UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User unbanned successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User unbanned successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/users/{user}/promote": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Promote user to admin",
+                "description": "Grant admin privileges to a regular user",
+                "operationId": "promoteUser",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "User UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User promoted to admin successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User promoted to admin successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "User is already an admin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User is already an admin"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/users/{user}/demote": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Demote admin to regular user",
+                "description": "Remove admin privileges from an admin user",
+                "operationId": "demoteUser",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "User UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin demoted to user successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin demoted to user successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "User is not an admin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User is not an admin"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Cannot demote yourself",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Cannot demote yourself"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/logs": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get admin activity logs",
+                "description": "Retrieve admin activity logs with filtering options for audit trail",
+                "operationId": "getAdminLogs",
+                "parameters": [
+                    {
+                        "name": "admin_id",
+                        "in": "query",
+                        "description": "Filter by specific admin ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "query",
+                        "description": "Filter by action type",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "user_ban",
+                                "user_unban",
+                                "user_promote",
+                                "user_demote",
+                                "event_ban",
+                                "event_unban",
+                                "post_delete"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "target_type",
+                        "in": "query",
+                        "description": "Filter by target type",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "user",
+                                "event",
+                                "post",
+                                "forum_post"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "target_id",
+                        "in": "query",
+                        "description": "Filter by target ID (use with target_type)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "severity",
+                        "in": "query",
+                        "description": "Filter by severity level",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "info",
+                                "warning",
+                                "medium",
+                                "high",
+                                "critical"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "description": "Limit to recent days",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 365,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of logs per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin logs retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Admin logs retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "action": {
+                                                        "type": "string"
+                                                    },
+                                                    "target_type": {
+                                                        "type": "string"
+                                                    },
+                                                    "target_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "description": {
+                                                        "type": "string"
+                                                    },
+                                                    "changes": {
+                                                        "type": "object"
+                                                    },
+                                                    "metadata": {
+                                                        "type": "object"
+                                                    },
+                                                    "ip_address": {
+                                                        "type": "string"
+                                                    },
+                                                    "severity": {
+                                                        "type": "string"
+                                                    },
+                                                    "admin": {
+                                                        "properties": {
+                                                            "uuid": {
+                                                                "type": "string",
+                                                                "format": "uuid"
+                                                            },
+                                                            "first_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "last_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "email": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/events": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get all events for admin management",
+                "description": "Retrieve all events with filtering options for administrative oversight",
+                "operationId": "getAdminEvents",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by event status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "draft",
+                                "published",
+                                "cancelled",
+                                "completed",
+                                "banned"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search events by title or description",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of events per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Events retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Events retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/events/{event}": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get event details for admin",
+                "description": "Retrieve detailed event information including registrations, resources, and forums for admin oversight",
+                "operationId": "getAdminEventDetails",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Event details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Event details retrieved successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "description": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "location_type": {
+                                                    "type": "string"
+                                                },
+                                                "location": {
+                                                    "type": "string"
+                                                },
+                                                "meeting_link": {
+                                                    "type": "string"
+                                                },
+                                                "start_date": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "end_date": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "capacity": {
+                                                    "type": "integer"
+                                                },
+                                                "registration_deadline": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "host": {
+                                                    "type": "object"
+                                                },
+                                                "registrations": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "registration_count": {
+                                                    "type": "integer"
+                                                },
+                                                "resources_count": {
+                                                    "type": "integer"
+                                                },
+                                                "forums_count": {
+                                                    "type": "integer"
+                                                },
+                                                "available_spots": {
+                                                    "type": "integer"
+                                                },
+                                                "is_full": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Event not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Delete an event",
+                "description": "Delete an event and all associated data (soft delete)",
+                "operationId": "deleteEvent",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Event deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Event deleted successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Event not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/events/{event}/status": {
+            "put": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Update event status",
+                "description": "Update the status of an event (admin only)",
+                "operationId": "updateEventStatus",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "description": "New event status",
+                                        "type": "string",
+                                        "enum": [
+                                            "draft",
+                                            "published",
+                                            "cancelled",
+                                            "completed"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Event status updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Event status updated successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Event not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/events/{event}/ban": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Ban an event",
+                "description": "Ban an event making it invisible to non-admin users",
+                "operationId": "banEvent",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "reason": {
+                                        "description": "Reason for banning the event",
+                                        "type": "string",
+                                        "maxLength": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Event banned successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Event banned successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "banned"
+                                                },
+                                                "reason": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/events/{event}/unban": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Unban an event",
+                "description": "Restore a banned event to published status",
+                "operationId": "unbanEvent",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Event unbanned successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Event unbanned successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "published"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Event is not currently banned",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Event is not currently banned"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/events/{event}/force-delete": {
+            "delete": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Permanently delete an event",
+                "description": "Permanently delete an event and all associated data. This action cannot be undone.",
+                "operationId": "forceDeleteEvent",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "confirmation",
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "confirmation": {
+                                        "description": "Must be 'DELETE' to confirm",
+                                        "type": "string",
+                                        "enum": [
+                                            "DELETE"
+                                        ]
+                                    },
+                                    "reason": {
+                                        "description": "Reason for permanent deletion",
+                                        "type": "string",
+                                        "maxLength": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Event permanently deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Event permanently deleted successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/forum-posts": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get all forum posts for moderation",
+                "description": "Retrieve forum posts with filtering options for admin moderation",
+                "operationId": "getAdminForumPosts",
+                "parameters": [
+                    {
+                        "name": "forum_id",
+                        "in": "query",
+                        "description": "Filter by specific forum ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filter by specific user ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "reported",
+                        "in": "query",
+                        "description": "Show only reported posts",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "date_range",
+                        "in": "query",
+                        "description": "Filter by date range",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "today",
+                                "week",
+                                "month"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of posts per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Forum posts retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Forum posts retrieved successfully"
+                                        },
+                                        "data": {
+                                            "description": "Paginated forum posts",
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/forum-posts/{post}": {
+            "delete": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Delete a forum post (admin moderation)",
+                "description": "Delete a forum post as part of content moderation with reason logging",
+                "operationId": "deleteForumPost",
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "description": "Forum Post ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "reason": {
+                                        "description": "Reason for deleting the forum post",
+                                        "type": "string",
+                                        "maxLength": 500,
+                                        "example": "Inappropriate content"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Forum post deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Forum post deleted successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Forum post not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/platform-health": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get platform health metrics",
+                "description": "Retrieve comprehensive platform health and system metrics",
+                "operationId": "getPlatformHealth",
+                "responses": {
+                    "200": {
+                        "description": "Platform health retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Platform health retrieved successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "database": {
+                                                    "properties": {
+                                                        "status": {
+                                                            "type": "string",
+                                                            "example": "healthy"
+                                                        },
+                                                        "connections": {
+                                                            "type": "string",
+                                                            "example": "active"
+                                                        },
+                                                        "last_backup": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "active_users_24h": {
+                                                    "type": "integer"
+                                                },
+                                                "system_resources": {
+                                                    "properties": {
+                                                        "memory_usage": {
+                                                            "type": "integer"
+                                                        },
+                                                        "peak_memory": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "event_statistics": {
+                                                    "properties": {
+                                                        "total_events": {
+                                                            "type": "integer"
+                                                        },
+                                                        "active_events": {
+                                                            "type": "integer"
+                                                        },
+                                                        "upcoming_events": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "timestamp": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/analytics/overview": {
             "get": {
                 "tags": [
@@ -310,6 +2198,89 @@
                 ]
             }
         },
+        "/api/v1/admin/analytics/generate-daily": {
+            "post": {
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "Generate daily metrics manually",
+                "description": "Manually trigger the generation of daily analytics metrics for a specific date",
+                "operationId": "generateDailyMetrics",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Date to generate metrics for (YYYY-MM-DD format)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-01-15"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Daily metrics generated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daily metrics generated successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "date": {
+                                                    "type": "string",
+                                                    "format": "date"
+                                                },
+                                                "metrics_generated": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "user_engagement": {
+                                                    "type": "object"
+                                                },
+                                                "event_activity": {
+                                                    "type": "object"
+                                                },
+                                                "forum_metrics": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid date format or future date",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/register": {
             "post": {
                 "tags": [
@@ -469,7 +2440,7 @@
                     "Authentication"
                 ],
                 "summary": "User login",
-                "description": "Authenticate user and return access token",
+                "description": "Authenticate user and return access token. Also sets an HTTP-only cookie for automatic authentication in subsequent requests.",
                 "operationId": "0e326ce09f6496b8aa071164115ce2e0",
                 "requestBody": {
                     "required": true,
@@ -498,7 +2469,16 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Login successful",
+                        "description": "Login successful. Access token returned in response body and also set as HTTP-only cookie 'academia_world_token'.",
+                        "headers": {
+                            "Set-Cookie": {
+                                "description": "HTTP-only authentication cookie",
+                                "schema": {
+                                    "type": "string",
+                                    "example": "academia_world_token=1|TOKEN_HERE; Path=/; HttpOnly; SameSite=Lax"
+                                }
+                            }
+                        },
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -514,6 +2494,11 @@
                                         "token_type": {
                                             "type": "string",
                                             "example": "Bearer"
+                                        },
+                                        "expires_in": {
+                                            "description": "Token expiration in minutes",
+                                            "type": "integer",
+                                            "example": 172800
                                         },
                                         "user": {
                                             "$ref": "#/components/schemas/User"
@@ -553,7 +2538,7 @@
                     "Authentication"
                 ],
                 "summary": "Get current user",
-                "description": "Get current authenticated user information",
+                "description": "Get current authenticated user information. Authentication can be provided via Bearer token or HTTP-only cookie.",
                 "operationId": "d0e394c8b0ce07e35936025b95de8ce2",
                 "responses": {
                     "200": {
@@ -639,6 +2624,9 @@
                 "security": [
                     {
                         "sanctum": []
+                    },
+                    {
+                        "cookieAuth": []
                     }
                 ]
             }
@@ -661,6 +2649,65 @@
                                         "message": {
                                             "type": "string",
                                             "example": "Logged out successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Refresh access token",
+                "description": "Refresh the current access token with a new one",
+                "operationId": "24439620f349c61e54353644309234a4",
+                "responses": {
+                    "200": {
+                        "description": "Token refreshed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Token refreshed successfully"
+                                        },
+                                        "access_token": {
+                                            "type": "string",
+                                            "example": "1|NEW_TOKEN_HERE"
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "Bearer"
+                                        },
+                                        "expires_in": {
+                                            "description": "Token expiration in minutes",
+                                            "type": "integer",
+                                            "example": 172800
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
                                         }
                                     },
                                     "type": "object"
@@ -1025,6 +3072,17 @@
                         "schema": {
                             "type": "string",
                             "format": "date"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
                         }
                     }
                 ],
@@ -1544,22 +3602,23 @@
                 ]
             }
         },
-        "/api/v1/events/{id}/unregister": {
+        "/api/v1/events/{event}/unregister": {
             "delete": {
                 "tags": [
                     "Events"
                 ],
                 "summary": "Unregister from an event",
                 "description": "Remove user registration from a specific event",
-                "operationId": "ca3ac7de7800c1fadda9b0aa08997c24",
+                "operationId": "735f5b268111b11ce4961c5a3ba4c80d",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "event",
                         "in": "path",
-                        "description": "Event ID",
+                        "description": "Event UUID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -1616,6 +3675,19 @@
                 "summary": "Get user's hosted events",
                 "description": "Retrieve all events hosted by the authenticated user",
                 "operationId": "71bccf7ba4eefef30f053a39ecd809b9",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "User events retrieved successfully",
@@ -1667,6 +3739,19 @@
                 "summary": "Get user's event registrations",
                 "description": "Retrieve all events the authenticated user has registered for",
                 "operationId": "724843daf57b096461f15e6f0603daa7",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "User registrations retrieved successfully",
@@ -1710,22 +3795,23 @@
                 ]
             }
         },
-        "/api/v1/events/{id}/attendees": {
+        "/api/v1/events/{event}/attendees": {
             "get": {
                 "tags": [
                     "Events"
                 ],
                 "summary": "Get event attendees",
                 "description": "Retrieve list of event attendees (only for event host)",
-                "operationId": "5cf7ea26ccbf1edaa83203c00f010420",
+                "operationId": "f3da33879561813bbec0985c172c1fbd",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "event",
                         "in": "path",
-                        "description": "Event ID",
+                        "description": "Event UUID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -1756,223 +3842,6 @@
                     },
                     "403": {
                         "description": "Unauthorized to view attendees",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Event not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/admin/events/{id}/ban": {
-            "post": {
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Ban an event (Admin only)",
-                "description": "Ban an event with reason (admin access required)",
-                "operationId": "b5a8dcbdcb542f3f0155790deab295cd",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "Event ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "reason"
-                                ],
-                                "properties": {
-                                    "reason": {
-                                        "type": "string",
-                                        "example": "Inappropriate content detected"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Event banned successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Event banned successfully"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/Event"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Admin access required",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Event not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/admin/events/{id}/unban": {
-            "post": {
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Unban an event (Admin only)",
-                "description": "Restore a banned event to published status (admin access required)",
-                "operationId": "0755bec870fd4531c80dd39759db3d18",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "Event ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Event unbanned successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Event unbanned successfully"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/Event"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Admin access required",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Event not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/admin/events/{id}/force-delete": {
-            "delete": {
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Force delete an event (Admin only)",
-                "description": "Permanently delete an event and all associated data (admin access required)",
-                "operationId": "00fb0161a4fd279b47185bd3c75a0f77",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "Event ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Event deleted successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Event permanently deleted"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Admin access required",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2144,6 +4013,17 @@
                         "schema": {
                             "type": "integer",
                             "maximum": 50,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
                             "minimum": 1
                         }
                     }
@@ -2499,83 +4379,7 @@
                     }
                 ]
             },
-            "delete": {
-                "tags": [
-                    "Forums"
-                ],
-                "summary": "Delete a forum",
-                "description": "Deletes a forum and all its posts. Only event hosts and admins can delete forums.",
-                "operationId": "deleteForum",
-                "parameters": [
-                    {
-                        "name": "forum",
-                        "in": "path",
-                        "description": "Forum UUID",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid",
-                            "example": "550e8400-e29b-41d4-a716-446655440000"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Forum deleted successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Forum deleted successfully"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Not authorized to delete forum",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "You are not authorized to delete this forum"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Forum not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Forum not found"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "patch": {
+            "put": {
                 "tags": [
                     "Forums"
                 ],
@@ -2720,6 +4524,82 @@
                                         },
                                         "errors": {
                                             "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Forums"
+                ],
+                "summary": "Delete a forum",
+                "description": "Deletes a forum and all its posts. Only event hosts and admins can delete forums.",
+                "operationId": "deleteForum",
+                "parameters": [
+                    {
+                        "name": "forum",
+                        "in": "path",
+                        "description": "Forum UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Forum deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Forum deleted successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not authorized to delete forum",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "You are not authorized to delete this forum"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Forum not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Forum not found"
                                         }
                                     },
                                     "type": "object"
@@ -2902,10 +4782,11 @@
                                         "minLength": 1,
                                         "example": "This is my post content"
                                     },
-                                    "parent_id": {
-                                        "description": "ID of parent post for replies",
-                                        "type": "integer",
-                                        "example": 123,
+                                    "parent_uuid": {
+                                        "description": "UUID of parent post for replies",
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000",
                                         "nullable": true
                                     }
                                 },
@@ -3010,7 +4891,7 @@
                 ]
             }
         },
-        "/api/v1/forum-posts/{post}": {
+        "/api/v1/posts/{post}": {
             "get": {
                 "tags": [
                     "Forum Posts"
@@ -3287,7 +5168,7 @@
                 ],
                 "summary": "Delete a post",
                 "description": "Deletes a forum post. Only post author, forum host, or admin can delete posts.",
-                "operationId": "deleteForumPost",
+                "operationId": "deletePost",
                 "parameters": [
                     {
                         "name": "post",
@@ -3357,7 +5238,7 @@
                 ]
             }
         },
-        "/api/v1/forum-posts/{post}/like": {
+        "/api/v1/posts/{post}/like": {
             "post": {
                 "tags": [
                     "Forum Posts"
@@ -3429,7 +5310,7 @@
                 ]
             }
         },
-        "/api/v1/forum-posts/{post}/pin": {
+        "/api/v1/posts/{post}/pin": {
             "post": {
                 "tags": [
                     "Forum Posts"
@@ -3514,7 +5395,7 @@
                 ]
             }
         },
-        "/api/v1/forum-posts/{post}/solution": {
+        "/api/v1/posts/{post}/solution": {
             "post": {
                 "tags": [
                     "Forum Posts"
@@ -3628,10 +5509,11 @@
                     {
                         "name": "event",
                         "in": "path",
-                        "description": "Event ID",
+                        "description": "Event UUID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     },
                     {
@@ -3698,10 +5580,11 @@
                     {
                         "name": "event",
                         "in": "path",
-                        "description": "Event ID",
+                        "description": "Event UUID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -3796,7 +5679,8 @@
                         "description": "Resource UUID",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -3841,7 +5725,8 @@
                         "description": "Resource UUID",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -3929,7 +5814,8 @@
                         "description": "Resource UUID",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -3978,7 +5864,8 @@
                         "description": "Resource UUID",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -4003,7 +5890,7 @@
                 }
             }
         },
-        "/api/v1/user-connections": {
+        "/api/v1/connections": {
             "get": {
                 "tags": [
                     "User Connections"
@@ -4184,7 +6071,7 @@
                 ]
             }
         },
-        "/api/v1/user-connections/pending": {
+        "/api/v1/connections/pending": {
             "get": {
                 "tags": [
                     "User Connections"
@@ -4244,7 +6131,7 @@
                 ]
             }
         },
-        "/api/v1/user-connections/{connection}/respond": {
+        "/api/v1/connections/{connection}/respond": {
             "put": {
                 "tags": [
                     "User Connections"
@@ -4256,10 +6143,11 @@
                     {
                         "name": "connection",
                         "in": "path",
-                        "description": "Connection ID",
+                        "description": "Connection UUID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -4269,16 +6157,17 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "status"
+                                    "action"
                                 ],
                                 "properties": {
-                                    "status": {
+                                    "action": {
                                         "type": "string",
                                         "enum": [
-                                            "accepted",
-                                            "declined"
+                                            "accept",
+                                            "decline",
+                                            "block"
                                         ],
-                                        "example": "accepted"
+                                        "example": "accept"
                                     }
                                 },
                                 "type": "object"
@@ -4343,7 +6232,7 @@
                 ]
             }
         },
-        "/api/v1/user-connections/{connection}": {
+        "/api/v1/connections/{connection}": {
             "delete": {
                 "tags": [
                     "User Connections"
@@ -4355,10 +6244,11 @@
                     {
                         "name": "connection",
                         "in": "path",
-                        "description": "Connection ID",
+                        "description": "Connection UUID",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     }
                 ],
@@ -4419,7 +6309,7 @@
                 ]
             }
         },
-        "/api/v1/user-connections/search": {
+        "/api/v1/users/search": {
             "get": {
                 "tags": [
                     "User Connections"
@@ -5152,13 +7042,23 @@
         "securitySchemes": {
             "sanctum": {
                 "type": "http",
-                "description": "Laravel Sanctum token authentication",
+                "description": "Laravel Sanctum token authentication via Bearer token",
                 "bearerFormat": "JWT",
                 "scheme": "bearer"
+            },
+            "cookieAuth": {
+                "type": "apiKey",
+                "description": "Laravel Sanctum token authentication via HTTP-only cookie. The token is automatically set on successful login and used for subsequent requests.",
+                "name": "academia_world_token",
+                "in": "cookie"
             }
         }
     },
     "tags": [
+        {
+            "name": "Admin",
+            "description": "Administrative operations for platform management"
+        },
         {
             "name": "Analytics",
             "description": "Platform analytics and metrics for administrators"
@@ -5182,10 +7082,6 @@
         {
             "name": "User Profile",
             "description": "User profile management endpoints"
-        },
-        {
-            "name": "Admin",
-            "description": "Admin"
         },
         {
             "name": "Forum Posts",

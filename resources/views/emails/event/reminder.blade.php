@@ -32,7 +32,7 @@ Your event is starting **in 1 hour**! Don't forget to join us.
 Join Virtual Event
 </x-mail::button>
 @else
-<x-mail::button :url="config('app.frontend_url', config('app.url')) . '/events/' . $event->id">
+<x-mail::button :url="config('app.frontend_url', config('app.url')) . '/events/' . $event->uuid">
 View Event Details
 </x-mail::button>
 @endif

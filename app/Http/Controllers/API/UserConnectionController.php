@@ -12,7 +12,7 @@ class UserConnectionController extends Controller
 {
     /**
      * @OA\Get(
-     *     path="/api/v1/user-connections",
+     *     path="/api/v1/connections",
      *     summary="Get user's connections",
      *     description="Retrieves all accepted connections for the authenticated user",
      *     operationId="getUserConnections",
@@ -73,7 +73,7 @@ class UserConnectionController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/user-connections/pending",
+     *     path="/api/v1/connections/pending",
      *     summary="Get pending connection requests",
      *     description="Retrieves all pending connection requests for the authenticated user",
      *     operationId="getPendingConnections",
@@ -112,7 +112,7 @@ class UserConnectionController extends Controller
             ->get()
             ->map(function ($connection) {
                 return [
-                    'id' => $connection->id,
+                    'uuid' => $connection->uuid,
                     'requester' => [
                         'name' => $connection->requester->name,
                         'institution' => $connection->requester->institution,
@@ -130,7 +130,7 @@ class UserConnectionController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/user-connections",
+     *     path="/api/v1/connections",
      *     summary="Send a connection request",
      *     description="Send a connection request to another user",
      *     operationId="sendConnectionRequest",
@@ -185,11 +185,11 @@ class UserConnectionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'user_uuid' => ['required', 'uuid', 'exists:users,uuid'],
             'message' => ['nullable', 'string', 'max:500']
         ]);
 
-        $targetUser = User::find($validated['user_id']);
+        $targetUser = User::where('uuid', $validated['user_uuid'])->first();
         $currentUser = $request->user();
 
         // Check if trying to connect to self
@@ -231,7 +231,7 @@ class UserConnectionController extends Controller
         return response()->json([
             'message' => 'Connection request sent successfully',
             'data' => [
-                'id' => $connection->id,
+                'uuid' => $connection->uuid,
                 'status' => $connection->status,
                 'sent_at' => $connection->created_at,
             ]
@@ -240,7 +240,7 @@ class UserConnectionController extends Controller
 
     /**
      * @OA\Put(
-     *     path="/api/v1/user-connections/{connection}/respond",
+     *     path="/api/v1/connections/{connection}/respond",
      *     summary="Respond to a connection request",
      *     description="Accept or decline a connection request",
      *     operationId="respondToConnectionRequest",
@@ -248,15 +248,15 @@ class UserConnectionController extends Controller
      *     @OA\Parameter(
      *         name="connection",
      *         in="path",
-     *         description="Connection ID",
+     *         description="Connection UUID",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"status"},
-     *             @OA\Property(property="status", type="string", enum={"accepted", "declined"}, example="accepted")
+     *             required={"action"},
+     *             @OA\Property(property="action", type="string", enum={"accept", "decline", "block"}, example="accept")
      *         )
      *     ),
      *     @OA\Response(
@@ -329,7 +329,7 @@ class UserConnectionController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/user-connections/{connection}",
+     *     path="/api/v1/connections/{connection}",
      *     summary="Remove a connection",
      *     description="Delete an existing user connection",
      *     operationId="removeConnection",
@@ -337,9 +337,9 @@ class UserConnectionController extends Controller
      *     @OA\Parameter(
      *         name="connection",
      *         in="path",
-     *         description="Connection ID",
+     *         description="Connection UUID",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Response(
      *         response=200,
@@ -385,7 +385,7 @@ class UserConnectionController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/user-connections/search",
+     *     path="/api/v1/users/search",
      *     summary="Search for users to connect with",
      *     description="Search for users by name, institution, or department to send connection requests",
      *     operationId="searchUsersToConnect",
@@ -461,14 +461,14 @@ class UserConnectionController extends Controller
             $query->where('department', 'like', '%' . $validated['department'] . '%');
         }
 
-        $users = $query->select('id', 'name', 'institution', 'department', 'position')
+        $users = $query->select('id','uuid', 'name', 'institution', 'department', 'position')
                       ->limit(20)
                       ->get()
                       ->map(function ($user) use ($currentUser) {
                           $connectionStatus = $currentUser->getConnectionStatusWith($user);
                           
                           return [
-                              'id' => $user->id,
+                              'uuid' => $user->uuid,
                               'name' => $user->name,
                               'institution' => $user->institution,
                               'department' => $user->department,

@@ -5,11 +5,16 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\DiscussionForum;
 use App\Models\ForumPost;
+use App\Services\AnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ForumPostController extends Controller
 {
+    public function __construct(private AnalyticsService $analyticsService)
+    {
+        // Constructor injection for AnalyticsService
+    }
     /**
      * @OA\Get(
      *     path="/api/v1/forums/{forum}/posts",
@@ -73,7 +78,7 @@ class ForumPostController extends Controller
     public function index(DiscussionForum $forum): JsonResponse
     {
         $posts = $forum->topLevelPosts()
-            ->with(['user:id,name', 'replies.user:id,name'])
+            ->with(['user:id,uuid,name', 'replies.user:id,uuid,name'])
             ->withCount('replies')
             ->paginate(20);
 
@@ -133,7 +138,7 @@ class ForumPostController extends Controller
      *         @OA\JsonContent(
      *             required={"content"},
      *             @OA\Property(property="content", type="string", minLength=1, maxLength=10000, example="This is my post content"),
-     *             @OA\Property(property="parent_id", type="integer", nullable=true, example=123, description="ID of parent post for replies")
+     *             @OA\Property(property="parent_uuid", type="string", format="uuid", nullable=true, example="550e8400-e29b-41d4-a716-446655440000", description="UUID of parent post for replies")
      *         )
      *     ),
      *     @OA\Response(
@@ -186,17 +191,19 @@ class ForumPostController extends Controller
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'min:1', 'max:10000'],
-            'parent_id' => ['nullable', 'exists:forum_posts,id']
+            'parent_uuid' => ['nullable', 'uuid', 'exists:forum_posts,uuid']
         ]);
 
-        // If parent_id is provided, ensure it belongs to this forum
-        if (isset($validated['parent_id']) && $validated['parent_id']) {
-            $parentPost = ForumPost::find($validated['parent_id']);
+        // If parent_uuid is provided, ensure it belongs to this forum
+        if (isset($validated['parent_uuid']) && $validated['parent_uuid']) {
+            $parentPost = ForumPost::where('uuid', $validated['parent_uuid'])->first();
             if (!$parentPost || $parentPost->forum_id !== $forum->id) {
                 return response()->json([
                     'message' => 'Invalid parent post'
                 ], 422);
             }
+            // Use the actual ID for the database relationship
+            $validated['parent_id'] = $parentPost->id;
         }
 
         $post = ForumPost::create([
@@ -206,7 +213,18 @@ class ForumPostController extends Controller
             'content' => $validated['content'],
         ]);
 
-        $post->load(['user:id,name']);
+        $post->load(['user:id,uuid,name']);
+
+        // Track analytics
+        $this->analyticsService->trackEngagement('post_creation', [
+            'entity_type' => 'forum_post',
+            'entity_id' => $post->id,
+            'metadata' => [
+                'forum_id' => $forum->id,
+                'parent_id' => $validated['parent_id'] ?? null,
+                'is_reply' => !is_null($validated['parent_id'] ?? null),
+            ]
+        ]);
 
         return response()->json([
             'message' => 'Post created successfully',
@@ -218,6 +236,7 @@ class ForumPostController extends Controller
                 'likes_count' => $post->likes_count,
                 'replies_count' => $post->replies_count,
                 'user' => [
+                    'uuid' => $post->user->uuid,
                     'name' => $post->user->name
                 ],
                 'created_at' => $post->created_at,
@@ -227,7 +246,7 @@ class ForumPostController extends Controller
 
     /**
      * @OA\Get(
-     *     path="/api/v1/forum-posts/{post}",
+     *     path="/api/v1/posts/{post}",
      *     summary="Get a specific post with its replies",
      *     description="Retrieves a specific forum post with all its replies and metadata",
      *     operationId="getForumPost",
@@ -292,8 +311,8 @@ class ForumPostController extends Controller
     public function show(ForumPost $post): JsonResponse
     {
         $post->load([
-            'user:id,name',
-            'replies.user:id,name',
+            'user:id,uuid,name',
+            'replies.user:id,uuid,name',
             'forum:id,title,type'
         ]);
 
@@ -307,6 +326,7 @@ class ForumPostController extends Controller
                 'likes_count' => $post->likes_count,
                 'replies_count' => $post->replies_count,
                 'user' => [
+                    'uuid' => $post->user->uuid,
                     'name' => $post->user->name
                 ],
                 'replies' => $post->replies->map(function ($reply) {
@@ -316,6 +336,7 @@ class ForumPostController extends Controller
                         'is_solution' => $reply->is_solution,
                         'likes_count' => $reply->likes_count,
                         'user' => [
+                            'uuid' => $reply->user->uuid,
                             'name' => $reply->user->name
                         ],
                         'created_at' => $reply->created_at,
@@ -333,7 +354,7 @@ class ForumPostController extends Controller
 
     /**
      * @OA\Put(
-     *     path="/api/v1/forum-posts/{post}",
+     *     path="/api/v1/posts/{post}",
      *     summary="Update a post",
      *     description="Updates a forum post. Only the post author can edit their posts.",
      *     operationId="updateForumPost",
@@ -417,10 +438,10 @@ class ForumPostController extends Controller
 
     /**
      * @OA\Delete(
-     *     path="/api/v1/forum-posts/{post}",
+     *     path="/api/v1/posts/{post}",
      *     summary="Delete a post",
      *     description="Deletes a forum post. Only post author, forum host, or admin can delete posts.",
-     *     operationId="deleteForumPost",
+     *     operationId="deletePost",
      *     tags={"Forum Posts"},
      *     @OA\Parameter(
      *         name="post",
@@ -471,7 +492,7 @@ class ForumPostController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/forum-posts/{post}/like",
+     *     path="/api/v1/posts/{post}/like",
      *     summary="Toggle like on a post",
      *     description="Like or unlike a forum post",
      *     operationId="toggleLikeForumPost",
@@ -510,6 +531,16 @@ class ForumPostController extends Controller
     {
         $result = $post->toggleLike($request->user());
 
+        // Track analytics
+        $this->analyticsService->trackEngagement('post_like', [
+            'entity_type' => 'forum_post',
+            'entity_id' => $post->id,
+            'metadata' => [
+                'liked' => $result['liked'],
+                'forum_id' => $post->forum_id,
+            ]
+        ]);
+
         return response()->json([
             'message' => $result['liked'] ? 'Post liked' : 'Post unliked',
             'data' => $result
@@ -518,7 +549,7 @@ class ForumPostController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/forum-posts/{post}/pin",
+     *     path="/api/v1/posts/{post}/pin",
      *     summary="Pin/unpin a post",
      *     description="Pin or unpin a forum post. Only event hosts and admins can pin posts.",
      *     operationId="togglePinForumPost",
@@ -561,6 +592,9 @@ class ForumPostController extends Controller
      */
     public function togglePin(Request $request, ForumPost $post): JsonResponse
     {
+        // Load the necessary relationships
+        $post->load(['forum.event']);
+        
         // Check if user can pin posts (event host or admin)
         if (!$request->user()->is_admin && $request->user()->id !== $post->forum->event->host_id) {
             return response()->json([
@@ -568,10 +602,18 @@ class ForumPostController extends Controller
             ], 403);
         }
 
-        $post->update(['is_pinned' => !$post->is_pinned]);
+        // Get current pin status and calculate new status
+        $currentPinStatus = $post->is_pinned;
+        $newPinStatus = !$currentPinStatus;
+        
+        // Update the pin status
+        $post->update(['is_pinned' => $newPinStatus]);
+        
+        // Refresh the model to get the updated data
+        $post->refresh();
 
         return response()->json([
-            'message' => $post->is_pinned ? 'Post pinned' : 'Post unpinned',
+            'message' => $newPinStatus ? 'Post pinned' : 'Post unpinned',
             'data' => [
                 'is_pinned' => $post->is_pinned,
             ]
@@ -580,7 +622,7 @@ class ForumPostController extends Controller
 
     /**
      * @OA\Post(
-     *     path="/api/v1/forum-posts/{post}/solution",
+     *     path="/api/v1/posts/{post}/solution",
      *     summary="Mark post as solution",
      *     description="Mark a post as the solution in Q&A forums. Only post author, event host, or admin can mark solutions.",
      *     operationId="markPostAsSolution",
@@ -630,6 +672,9 @@ class ForumPostController extends Controller
      */
     public function markAsSolution(Request $request, ForumPost $post): JsonResponse
     {
+        // Load the necessary relationships
+        $post->load(['forum.event', 'parent.user']);
+        
         // Check if this is a Q&A forum
         if ($post->forum->type !== 'q_and_a') {
             return response()->json([

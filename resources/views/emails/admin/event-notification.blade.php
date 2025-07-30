@@ -24,7 +24,7 @@ An event has been cancelled by the organizer.
 {{ Str::limit($event->description, 200) }}
 @endif
 
-<x-mail::button :url="config('app.frontend_url', config('app.url')) . '/admin/events/' . $event->id">
+<x-mail::button :url="config('app.frontend_url', config('app.url')) . '/admin/events/' . $event->uuid">
 View in Admin Panel
 </x-mail::button>
 

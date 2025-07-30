@@ -68,6 +68,7 @@ start_workers() {
     
     # Worker 1 - General queue processing
     nohup php artisan queue:work database \
+        --queue=emails,default \
         --sleep=3 \
         --tries=3 \
         --max-time=3600 \
@@ -77,6 +78,7 @@ start_workers() {
     
     # Worker 2 - General queue processing for redundancy
     nohup php artisan queue:work database \
+        --queue=emails,default \
         --sleep=3 \
         --tries=3 \
         --max-time=3600 \

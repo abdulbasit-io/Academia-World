@@ -5,7 +5,9 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\EmailVerificationToken;
+use App\Models\AnalyticsEvent;
 use App\Mail\EmailVerification;
+use App\Services\AnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -28,6 +30,13 @@ use Illuminate\Support\Str;
  */
 class AuthController extends Controller
 {
+    protected $analyticsService;
+
+    public function __construct(AnalyticsService $analyticsService)
+    {
+        $this->analyticsService = $analyticsService;
+    }
+
     /**
      * Register a new user
      * 
@@ -121,6 +130,24 @@ class AuthController extends Controller
 
             // Send email verification
             $this->sendVerificationEmail($user);
+
+            // Track user registration analytics (note: user not authenticated yet, so track differently)
+            try {
+                AnalyticsEvent::create([
+                    'user_id' => $user->id,
+                    'action' => 'user_registration',
+                    'entity_type' => 'user',
+                    'entity_id' => $user->id,
+                    'metadata' => [
+                        'institution' => $user->institution,
+                        'department' => $user->department,
+                        'registration_method' => 'email_form',
+                    ],
+                    'occurred_at' => now(),
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to track registration analytics', ['error' => $e->getMessage()]);
+            }
 
             return response()->json([
                 'message' => 'Registration successful. Please check your email for verification.',
@@ -227,6 +254,17 @@ class AuthController extends Controller
 
         // Update last login
         $user->update(['last_login_at' => now()]);
+
+        // Track login analytics
+        $this->analyticsService->trackEngagement('user_login', [
+            'entity_type' => 'user',
+            'entity_id' => $user->id,
+            'metadata' => [
+                'institution' => $user->institution,
+                'department' => $user->department,
+                'login_method' => 'email_password',
+            ]
+        ]);
 
         // Create token with expiration (4 months)
         $token = $user->createToken(
@@ -368,6 +406,15 @@ class AuthController extends Controller
         }
         
         $user->tokens()->delete();
+
+        // Track logout analytics
+        $this->analyticsService->trackEngagement('user_logout', [
+            'entity_type' => 'user',
+            'entity_id' => $user->id,
+            'metadata' => [
+                'session_duration' => 'unknown', // Could be calculated if session start time was tracked
+            ]
+        ]);
 
         // Create response and clear the cookie
         $response = response()->json([

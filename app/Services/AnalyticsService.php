@@ -6,459 +6,424 @@ use App\Models\AnalyticsEvent;
 use App\Models\PlatformMetric;
 use App\Models\User;
 use App\Models\Event;
-use App\Models\DiscussionForum;
 use App\Models\ForumPost;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class AnalyticsService
 {
     /**
-     * Track a user action
+     * Track user engagement action
      */
-    public function trackUserAction(string $action, array $data = []): AnalyticsEvent
+    public function trackEngagement(string $actionType, array $data = []): void
     {
-        return AnalyticsEvent::create([
-            'event_type' => 'user_action',
-            'action' => $action,
-            'entity_type' => $data['entity_type'] ?? null,
-            'entity_id' => $data['entity_id'] ?? null,
-            'user_id' => $data['user_id'] ?? Auth::id(),
-            'metadata' => $data['metadata'] ?? null,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'session_id' => session()->getId(),
-        ]);
+        try {
+            $userId = Auth::id();
+            if (!$userId) {
+                return; // Skip tracking for unauthenticated users
+            }
+
+            AnalyticsEvent::create([
+                'user_id' => $userId,
+                'action' => $actionType,
+                'entity_type' => $data['entity_type'] ?? null,
+                'entity_id' => $data['entity_id'] ?? null,
+                'metadata' => $data['metadata'] ?? [],
+                'occurred_at' => now(),
+            ]);
+
+            Log::info('Analytics tracked', [
+                'user_id' => $userId,
+                'action' => $actionType,
+                'entity_type' => $data['entity_type'] ?? null,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to track analytics', [
+                'error' => $e->getMessage(),
+                'action' => $actionType,
+                'user_id' => Auth::id(),
+            ]);
+        }
     }
 
     /**
-     * Track an engagement metric
+     * Generate platform analytics metrics
      */
-    public function trackEngagement(string $action, array $data = []): AnalyticsEvent
+    public function generatePlatformMetrics(): array
     {
-        return AnalyticsEvent::create([
-            'event_type' => 'engagement_metric',
-            'action' => $action,
-            'entity_type' => $data['entity_type'] ?? null,
-            'entity_id' => $data['entity_id'] ?? null,
-            'user_id' => $data['user_id'] ?? Auth::id(),
-            'metadata' => $data['metadata'] ?? null,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-            'session_id' => session()->getId(),
-        ]);
+        try {
+            $metrics = [
+                'users' => $this->generateUserEngagementMetrics(),
+                'events' => $this->generateEventActivityMetrics(),
+                'forum' => $this->generateForumActivityMetrics(),
+                'platform' => $this->generatePlatformOverviewMetrics(),
+            ];
+
+            // Store generated metrics
+            $this->storePlatformMetrics($metrics);
+
+            return $metrics;
+        } catch (\Exception $e) {
+            Log::error('Failed to generate platform metrics', ['error' => $e->getMessage()]);
+            return $this->getFallbackMetrics();
+        }
     }
 
     /**
-     * Generate daily active users metric
+     * Generate user engagement metrics
      */
-    public function generateDailyActiveUsers(Carbon $date): PlatformMetric
+    public function generateUserEngagementMetrics(): array
     {
-        $activeUsers = AnalyticsEvent::where('occurred_at', '>=', $date->startOfDay())
-            ->where('occurred_at', '<=', $date->endOfDay())
-            ->distinct('user_id')
-            ->count('user_id');
+        try {
+            // Try from analytics events first
+            $activeUsers = AnalyticsEvent::where('occurred_at', '>=', Carbon::now()->subDays(30))
+                ->distinct('user_id')
+                ->count('user_id');
 
-        return PlatformMetric::updateOrCreate([
-            'metric_type' => 'user_engagement',
-            'metric_key' => 'daily_active_users',
-            'metric_date' => $date->toDateString(),
-            'period' => 'daily',
-        ], [
-            'value' => ['count' => $activeUsers],
-            'breakdown' => $this->getUserEngagementBreakdown($date),
-        ]);
+            $dailyActiveUsers = AnalyticsEvent::where('occurred_at', '>=', Carbon::now()->subDay())
+                ->distinct('user_id')
+                ->count('user_id');
+
+            $weeklyActiveUsers = AnalyticsEvent::where('occurred_at', '>=', Carbon::now()->subWeek())
+                ->distinct('user_id')
+                ->count('user_id');
+
+            // Fallback to direct database queries if analytics data is insufficient
+            if ($activeUsers === 0) {
+                $activeUsers = User::where('last_login_at', '>=', Carbon::now()->subDays(30))->count();
+                $dailyActiveUsers = User::where('last_login_at', '>=', Carbon::now()->subDay())->count();
+                $weeklyActiveUsers = User::where('last_login_at', '>=', Carbon::now()->subWeek())->count();
+            }
+
+            return [
+                'total_users' => User::count(),
+                'active_users_30d' => $activeUsers,
+                'daily_active_users' => $dailyActiveUsers,
+                'weekly_active_users' => $weeklyActiveUsers,
+                'verified_users' => User::whereNotNull('email_verified_at')->count(),
+                'new_users_this_month' => User::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to generate user engagement metrics', ['error' => $e->getMessage()]);
+            return [
+                'total_users' => User::count(),
+                'active_users_30d' => 0,
+                'daily_active_users' => 0,
+                'weekly_active_users' => 0,
+                'verified_users' => User::whereNotNull('email_verified_at')->count(),
+                'new_users_this_month' => User::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+            ];
+        }
     }
 
     /**
-     * Generate event engagement metrics
+     * Generate event activity metrics
      */
-    public function generateEventEngagement(Carbon $date): PlatformMetric
+    public function generateEventActivityMetrics(): array
     {
-        $eventMetrics = DB::table('analytics_events')
-            ->where('event_type', 'engagement_metric')
-            ->where('entity_type', 'event')
-            ->whereDate('occurred_at', $date)
-            ->select('entity_id', DB::raw('count(*) as engagement_count'))
-            ->groupBy('entity_id')
-            ->get()
-            ->keyBy('entity_id')
-            ->map(fn($item) => $item->engagement_count)
-            ->toArray();
+        try {
+            // Try from analytics events first
+            $eventViews = AnalyticsEvent::where('action', 'event_view')
+                ->where('occurred_at', '>=', Carbon::now()->subDays(30))
+                ->count();
 
-        $totalEngagement = array_sum($eventMetrics);
+            $eventRegistrations = AnalyticsEvent::where('action', 'event_registration')
+                ->where('occurred_at', '>=', Carbon::now()->subDays(30))
+                ->count();
 
-        return PlatformMetric::updateOrCreate([
-            'metric_type' => 'event_engagement',
-            'metric_key' => 'total_daily_engagement',
-            'metric_date' => $date->toDateString(),
-            'period' => 'daily',
-        ], [
-            'value' => ['total' => $totalEngagement],
-            'breakdown' => [
-                'by_event' => $eventMetrics,
-                'top_events' => $this->getTopEvents($eventMetrics),
-            ],
-        ]);
+            // Fallback to direct database queries
+            if ($eventViews === 0) {
+                $eventViews = 0; // No direct way to track views without analytics
+            }
+
+            if ($eventRegistrations === 0) {
+                $eventRegistrations = DB::table('event_user_registrations')
+                    ->where('created_at', '>=', Carbon::now()->subDays(30))
+                    ->count();
+            }
+
+            return [
+                'total_events' => Event::count(),
+                'published_events' => Event::where('status', 'published')->count(),
+                'events_this_month' => Event::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+                'event_views_30d' => $eventViews,
+                'event_registrations_30d' => $eventRegistrations,
+                'average_registrations_per_event' => $this->getAverageRegistrationsPerEvent(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to generate event activity metrics', ['error' => $e->getMessage()]);
+            return [
+                'total_events' => Event::count(),
+                'published_events' => Event::where('status', 'published')->count(),
+                'events_this_month' => Event::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+                'event_views_30d' => 0,
+                'event_registrations_30d' => 0,
+                'average_registrations_per_event' => 0,
+            ];
+        }
     }
 
     /**
      * Generate forum activity metrics
      */
-    public function generateForumActivity(Carbon $date): PlatformMetric
+    public function generateForumActivityMetrics(): array
     {
-        $postsCreated = ForumPost::whereDate('created_at', $date)->count();
-        $likesGiven = AnalyticsEvent::where('action', 'post_like')
-            ->whereDate('occurred_at', $date)
-            ->count();
+        try {
+            // Try from analytics events first
+            $forumPosts = AnalyticsEvent::where('action', 'post_creation')
+                ->where('occurred_at', '>=', Carbon::now()->subDays(30))
+                ->count();
 
-        $forumBreakdown = DB::table('forum_posts')
-            ->join('discussion_forums', 'forum_posts.forum_id', '=', 'discussion_forums.id')
-            ->whereDate('forum_posts.created_at', $date)
-            ->select('discussion_forums.title', DB::raw('count(*) as post_count'))
-            ->groupBy('discussion_forums.id', 'discussion_forums.title')
-            ->get()
-            ->keyBy('title')
-            ->map(fn($item) => $item->post_count)
-            ->toArray();
+            $forumLikes = AnalyticsEvent::where('action', 'post_like')
+                ->where('occurred_at', '>=', Carbon::now()->subDays(30))
+                ->count();
 
-        return PlatformMetric::updateOrCreate([
-            'metric_type' => 'forum_activity',
-            'metric_key' => 'daily_activity',
-            'metric_date' => $date->toDateString(),
-            'period' => 'daily',
-        ], [
-            'value' => [
-                'posts_created' => $postsCreated,
-                'likes_given' => $likesGiven,
-            ],
-            'breakdown' => [
-                'by_forum' => $forumBreakdown,
-                'most_active_forums' => $this->getMostActiveForums($forumBreakdown),
-            ],
-        ]);
+            // Fallback to direct database queries
+            if ($forumPosts === 0) {
+                $forumPosts = ForumPost::where('created_at', '>=', Carbon::now()->subDays(30))->count();
+            }
+
+            if ($forumLikes === 0) {
+                $forumLikes = DB::table('forum_post_likes')
+                    ->where('created_at', '>=', Carbon::now()->subDays(30))
+                    ->count();
+            }
+
+            return [
+                'total_posts' => ForumPost::count(),
+                'posts_this_month' => ForumPost::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+                'new_posts_30d' => $forumPosts,
+                'post_likes_30d' => $forumLikes,
+                'active_discussions' => ForumPost::whereNull('parent_id')
+                    ->where('updated_at', '>=', Carbon::now()->subWeek())
+                    ->count(),
+                'total_discussions' => ForumPost::whereNull('parent_id')->count(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to generate forum activity metrics', ['error' => $e->getMessage()]);
+            return [
+                'total_posts' => ForumPost::count(),
+                'posts_this_month' => ForumPost::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+                'new_posts_30d' => 0,
+                'post_likes_30d' => 0,
+                'active_discussions' => 0,
+                'total_discussions' => ForumPost::whereNull('parent_uuid')->count(),
+            ];
+        }
     }
 
     /**
-     * Get platform overview statistics
+     * Generate platform overview metrics
+     */
+    public function generatePlatformOverviewMetrics(): array
+    {
+        try {
+            $totalActions = AnalyticsEvent::where('occurred_at', '>=', Carbon::now()->subDays(30))->count();
+            
+            $topActions = AnalyticsEvent::select('action', DB::raw('count(*) as count'))
+                ->where('occurred_at', '>=', Carbon::now()->subDays(30))
+                ->groupBy('action')
+                ->orderBy('count', 'desc')
+                ->limit(5)
+                ->get()
+                ->pluck('count', 'action')
+                ->toArray();
+
+            return [
+                'total_actions_30d' => $totalActions,
+                'top_actions' => $topActions,
+                'platform_health' => $this->calculatePlatformHealth(),
+                'growth_rate' => $this->calculateGrowthRate(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to generate platform overview metrics', ['error' => $e->getMessage()]);
+            return [
+                'total_actions_30d' => 0,
+                'top_actions' => [],
+                'platform_health' => 'unknown',
+                'growth_rate' => 0,
+            ];
+        }
+    }
+
+    /**
+     * Store platform metrics
+     */
+    private function storePlatformMetrics(array $metrics): void
+    {
+        try {
+            PlatformMetric::create([
+                'metric_type' => 'daily_summary',
+                'metric_date' => Carbon::now()->toDateString(),
+                'data' => $metrics,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to store platform metrics', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get fallback metrics when generation fails
+     */
+    private function getFallbackMetrics(): array
+    {
+        return [
+            'users' => [
+                'total_users' => User::count(),
+                'active_users_30d' => 0,
+                'daily_active_users' => 0,
+                'weekly_active_users' => 0,
+                'verified_users' => User::whereNotNull('email_verified_at')->count(),
+                'new_users_this_month' => User::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+            ],
+            'events' => [
+                'total_events' => Event::count(),
+                'published_events' => Event::where('status', 'published')->count(),
+                'events_this_month' => Event::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+                'event_views_30d' => 0,
+                'event_registrations_30d' => 0,
+                'average_registrations_per_event' => 0,
+            ],
+            'forum' => [
+                'total_posts' => ForumPost::count(),
+                'posts_this_month' => ForumPost::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
+                'new_posts_30d' => 0,
+                'post_likes_30d' => 0,
+                'active_discussions' => 0,
+                'total_discussions' => ForumPost::whereNull('parent_id')->count(),
+            ],
+            'platform' => [
+                'total_actions_30d' => 0,
+                'top_actions' => [],
+                'platform_health' => 'unknown',
+                'growth_rate' => 0,
+            ],
+        ];
+    }
+
+    /**
+     * Calculate average registrations per event
+     */
+    private function getAverageRegistrationsPerEvent(): float
+    {
+        try {
+            $eventCount = Event::count();
+            if ($eventCount === 0) return 0;
+
+            $totalRegistrations = DB::table('event_user_registrations')->count();
+            return round($totalRegistrations / $eventCount, 2);
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Calculate platform health score
+     */
+    private function calculatePlatformHealth(): string
+    {
+        try {
+            $activeUsers = User::where('last_login_at', '>=', Carbon::now()->subWeek())->count();
+            $totalUsers = User::count();
+            
+            if ($totalUsers === 0) return 'unknown';
+            
+            $healthScore = ($activeUsers / $totalUsers) * 100;
+            
+            if ($healthScore >= 70) return 'excellent';
+            if ($healthScore >= 50) return 'good';
+            if ($healthScore >= 30) return 'fair';
+            return 'needs_attention';
+        } catch (\Exception $e) {
+            return 'unknown';
+        }
+    }
+
+    /**
+     * Get platform overview for a specific number of days
      */
     public function getPlatformOverview(int $days = 30): array
     {
-        $endDate = Carbon::now();
-        $startDate = $endDate->copy()->subDays($days);
-
-        return [
-            'total_users' => User::count(),
-            'active_users_period' => $this->getActiveUsersInPeriod($startDate, $endDate),
-            'total_events' => Event::count(),
-            'events_this_period' => Event::where('created_at', '>=', $startDate)->count(),
-            'total_forum_posts' => ForumPost::count(),
-            'posts_this_period' => ForumPost::where('created_at', '>=', $startDate)->count(),
-            'total_forums' => DiscussionForum::count(),
-            'engagement_trend' => $this->getEngagementTrend($startDate, $endDate),
-        ];
-    }
-
-    /**
-     * Get user engagement breakdown
-     */
-    private function getUserEngagementBreakdown(Carbon $date): array
-    {
-        $actions = AnalyticsEvent::whereDate('occurred_at', $date)
-            ->select('action', DB::raw('count(*) as count'))
-            ->groupBy('action')
-            ->pluck('count', 'action')
-            ->toArray();
-
-        return [
-            'actions' => $actions,
-            'total_actions' => array_sum($actions),
-        ];
-    }
-
-    /**
-     * Get top events by engagement
-     */
-    private function getTopEvents(array $eventMetrics): array
-    {
-        arsort($eventMetrics);
-        return array_slice($eventMetrics, 0, 5, true);
-    }
-
-    /**
-     * Get most active forums
-     */
-    private function getMostActiveForums(array $forumBreakdown): array
-    {
-        arsort($forumBreakdown);
-        return array_slice($forumBreakdown, 0, 5, true);
-    }
-
-    /**
-     * Get active users in a specific period
-     */
-    private function getActiveUsersInPeriod(Carbon $startDate, Carbon $endDate): int
-    {
-        return AnalyticsEvent::whereBetween('occurred_at', [$startDate, $endDate])
-            ->distinct('user_id')
-            ->count('user_id');
-    }
-
-    /**
-     * Get engagement trend over a period
-     */
-    private function getEngagementTrend(Carbon $startDate, Carbon $endDate): array
-    {
-        return AnalyticsEvent::whereBetween('occurred_at', [$startDate, $endDate])
-            ->selectRaw('DATE(occurred_at) as date, count(*) as count')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('count', 'date')
-            ->toArray();
-    }
-
-    /**
-     * Get user engagement metrics for a specific period
-     */
-    public function getUserEngagementMetrics(int $days = 7): array
-    {
-        $startDate = now()->subDays($days);
-        $endDate = now();
-
-        return [
-            'total_users' => User::count(),
-            'active_users' => $this->getActiveUsersInPeriod($startDate, $endDate),
-            'new_users' => User::whereBetween('created_at', [$startDate, $endDate])->count(),
-            'avg_session_duration' => $this->getAverageSessionDuration($startDate, $endDate),
-            'engagement_trend' => $this->getEngagementTrend($startDate, $endDate),
-            'user_growth' => $this->getUserGrowthMetrics($days),
-        ];
-    }
-
-    /**
-     * Get event analytics for a specific period
-     */
-    public function getEventAnalytics(int $days = 30): array
-    {
-        $startDate = now()->subDays($days);
-        $endDate = now();
-
-        return [
-            'total_events' => Event::count(),
-            'events_created' => Event::whereBetween('created_at', [$startDate, $endDate])->count(),
-            'event_views' => AnalyticsEvent::where('action', 'event_view')
-                ->whereBetween('occurred_at', [$startDate, $endDate])->count(),
-            'event_registrations' => AnalyticsEvent::where('action', 'event_register')
-                ->whereBetween('occurred_at', [$startDate, $endDate])->count(),
-            'popular_events' => $this->getPopularEvents($days),
-            'event_engagement' => $this->getEventEngagementMetrics($startDate, $endDate),
-        ];
-    }
-
-    /**
-     * Get platform statistics
-     */
-    public function getPlatformStatistics(): array
-    {
-        return [
-            'total_users' => User::count(),
-            'total_events' => Event::count(),
-            'total_forums' => DiscussionForum::count(),
-            'total_posts' => ForumPost::count(),
-            'growth_metrics' => $this->getGrowthMetrics(),
-            'platform_health' => $this->getPlatformHealthMetrics(),
-        ];
-    }
-
-    /**
-     * Get real-time metrics
-     */
-    public function getRealtimeMetrics(): array
-    {
-        $lastHour = now()->subHour();
-
-        return [
-            'active_sessions' => AnalyticsEvent::where('occurred_at', '>=', $lastHour)
-                ->distinct('session_id')->count('session_id'),
-            'recent_activity' => AnalyticsEvent::where('occurred_at', '>=', $lastHour)
-                ->orderBy('occurred_at', 'desc')->take(20)->get(),
-            'live_events' => Event::where('start_date', '<=', now())
-                ->where('end_date', '>=', now())->count(),
-            'current_online_users' => $this->getCurrentOnlineUsers(),
-        ];
-    }
-
-    /**
-     * Update platform metrics (to be run daily)
-     */
-    public function updatePlatformMetrics(): void
-    {
-        $today = now()->format('Y-m-d');
-
-        $metrics = [
-            'total_users' => User::count(),
-            'total_events' => Event::count(),
-            'total_forums' => DiscussionForum::count(),
-            'total_posts' => ForumPost::count(),
-            'daily_active_users' => $this->getActiveUsersInPeriod(now()->startOfDay(), now()->endOfDay()),
-            'new_users_today' => User::whereDate('created_at', $today)->count(),
-            'events_created_today' => Event::whereDate('created_at', $today)->count(),
-        ];
-
-        foreach ($metrics as $name => $value) {
-            PlatformMetric::updateOrCreate(
-                ['metric_name' => $name, 'metric_date' => $today],
-                ['metric_value' => $value]
-            );
+        try {
+            return [
+                'period_days' => $days,
+                'users' => $this->generateUserEngagementMetrics(),
+                'events' => $this->generateEventActivityMetrics(),
+                'forum' => $this->generateForumActivityMetrics(),
+                'platform' => $this->generatePlatformOverviewMetrics(),
+                'generated_at' => now()->toISOString(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to get platform overview', ['error' => $e->getMessage()]);
+            return $this->getFallbackMetrics();
         }
     }
 
     /**
-     * Get current online users (active in last 15 minutes)
+     * Generate daily metrics for a specific date
      */
-    private function getCurrentOnlineUsers(): int
+    public function generateDailyMetrics(Carbon $date): array
     {
-        return AnalyticsEvent::where('occurred_at', '>=', now()->subMinutes(15))
-            ->distinct('user_id')
-            ->count('user_id');
-    }
+        try {
+            $metrics = [
+                'user_engagement' => $this->generateUserEngagementMetrics(),
+                'event_activity' => $this->generateEventActivityMetrics(),
+                'forum_activity' => $this->generateForumActivityMetrics(),
+                'platform_overview' => $this->generatePlatformOverviewMetrics(),
+            ];
 
-    /**
-     * Get growth metrics
-     */
-    private function getGrowthMetrics(): array
-    {
-        $thisMonth = now()->startOfMonth();
-        $lastMonth = now()->subMonth()->startOfMonth();
+            // Store each metric type separately for the date
+            foreach ($metrics as $type => $data) {
+                PlatformMetric::updateOrCreate(
+                    [
+                        'metric_type' => $type,
+                        'metric_date' => $date->toDateString(),
+                    ],
+                    [
+                        'data' => $data,
+                        'updated_at' => now(),
+                    ]
+                );
+            }
 
-        return [
-            'user_growth_this_month' => User::where('created_at', '>=', $thisMonth)->count(),
-            'user_growth_last_month' => User::whereBetween('created_at', [$lastMonth, $thisMonth])->count(),
-            'event_growth_this_month' => Event::where('created_at', '>=', $thisMonth)->count(),
-            'event_growth_last_month' => Event::whereBetween('created_at', [$lastMonth, $thisMonth])->count(),
-        ];
-    }
+            Log::info('Daily metrics generated', [
+                'date' => $date->toDateString(),
+                'metrics_count' => count($metrics),
+            ]);
 
-    /**
-     * Get platform health metrics
-     */
-    private function getPlatformHealthMetrics(): array
-    {
-        return [
-            'avg_events_per_user' => User::count() > 0 ? round(Event::count() / User::count(), 2) : 0,
-            'avg_posts_per_forum' => DiscussionForum::count() > 0 ? round(ForumPost::count() / DiscussionForum::count(), 2) : 0,
-            'user_retention_rate' => $this->calculateUserRetentionRate(),
-        ];
-    }
-
-    /**
-     * Calculate user retention rate
-     */
-    private function calculateUserRetentionRate(): float
-    {
-        $totalUsers = User::count();
-        if ($totalUsers === 0) return 0;
-
-        $activeUsers = $this->getActiveUsersInPeriod(now()->subDays(30), now());
-        return round(($activeUsers / $totalUsers) * 100, 2);
-    }
-
-    /**
-     * Get average session duration
-     */
-    private function getAverageSessionDuration(Carbon $startDate, Carbon $endDate): float
-    {
-        // Simplified calculation - in real implementation, track session start/end times
-        $sessions = AnalyticsEvent::whereBetween('occurred_at', [$startDate, $endDate])
-            ->groupBy('session_id')
-            ->selectRaw('session_id, MIN(occurred_at) as start_time, MAX(occurred_at) as end_time')
-            ->get();
-
-        if ($sessions->isEmpty()) return 0;
-
-        $totalDuration = 0;
-        foreach ($sessions as $session) {
-            $duration = strtotime($session->end_time) - strtotime($session->start_time);
-            $totalDuration += $duration;
+            return $metrics;
+        } catch (\Exception $e) {
+            Log::error('Failed to generate daily metrics', [
+                'date' => $date->toDateString(),
+                'error' => $e->getMessage(),
+            ]);
+            return [
+                'user_engagement' => $this->getFallbackMetrics()['users'],
+                'event_activity' => $this->getFallbackMetrics()['events'],
+                'forum_activity' => $this->getFallbackMetrics()['forum'],
+                'platform_overview' => $this->getFallbackMetrics()['platform'],
+            ];
         }
-
-        return round($totalDuration / $sessions->count() / 60, 2); // Return in minutes
     }
 
     /**
-     * Get user growth metrics
+     * Calculate growth rate
      */
-    private function getUserGrowthMetrics(int $days): array
+    private function calculateGrowthRate(): float
     {
-        $startDate = now()->subDays($days);
-        $previousPeriodStart = now()->subDays($days * 2);
-
-        $currentPeriod = User::whereBetween('created_at', [$startDate, now()])->count();
-        $previousPeriod = User::whereBetween('created_at', [$previousPeriodStart, $startDate])->count();
-
-        $growthRate = $previousPeriod > 0 ? round((($currentPeriod - $previousPeriod) / $previousPeriod) * 100, 2) : 0;
-
-        return [
-            'current_period' => $currentPeriod,
-            'previous_period' => $previousPeriod,
-            'growth_rate' => $growthRate,
-        ];
-    }
-
-    /**
-     * Get popular events
-     */
-    private function getPopularEvents(int $days): array
-    {
-        $startDate = now()->subDays($days);
-
-        return AnalyticsEvent::where('action', 'event_view')
-            ->whereBetween('occurred_at', [$startDate, now()])
-            ->selectRaw('entity_id, count(*) as views')
-            ->whereNotNull('entity_id')
-            ->groupBy('entity_id')
-            ->orderBy('views', 'desc')
-            ->take(10)
-            ->get()
-            ->map(function ($item) {
-                $event = Event::find($item->entity_id);
-                return [
-                    'event_id' => $item->entity_id,
-                    'event_title' => $event ? $event->title : 'Unknown Event',
-                    'views' => $item->views,
-                ];
-            })
-            ->toArray();
-    }
-
-    /**
-     * Get event engagement metrics
-     */
-    private function getEventEngagementMetrics(Carbon $startDate, Carbon $endDate): array
-    {
-        return [
-            'total_views' => AnalyticsEvent::where('action', 'event_view')
-                ->whereBetween('occurred_at', [$startDate, $endDate])->count(),
-            'total_registrations' => AnalyticsEvent::where('action', 'event_register')
-                ->whereBetween('occurred_at', [$startDate, $endDate])->count(),
-            'total_shares' => AnalyticsEvent::where('action', 'event_share')
-                ->whereBetween('occurred_at', [$startDate, $endDate])->count(),
-            'conversion_rate' => $this->calculateEventConversionRate($startDate, $endDate),
-        ];
-    }
-
-    /**
-     * Calculate event conversion rate (registrations / views)
-     */
-    private function calculateEventConversionRate(Carbon $startDate, Carbon $endDate): float
-    {
-        $views = AnalyticsEvent::where('action', 'event_view')
-            ->whereBetween('occurred_at', [$startDate, $endDate])->count();
-        
-        $registrations = AnalyticsEvent::where('action', 'event_register')
-            ->whereBetween('occurred_at', [$startDate, $endDate])->count();
-
-        return $views > 0 ? round(($registrations / $views) * 100, 2) : 0;
+        try {
+            $thisMonth = User::where('created_at', '>=', Carbon::now()->startOfMonth())->count();
+            $lastMonth = User::where('created_at', '>=', Carbon::now()->subMonth()->startOfMonth())
+                ->where('created_at', '<', Carbon::now()->startOfMonth())
+                ->count();
+            
+            if ($lastMonth === 0) return $thisMonth > 0 ? 100 : 0;
+            
+            return round((($thisMonth - $lastMonth) / $lastMonth) * 100, 2);
+        } catch (\Exception $e) {
+            return 0;
+        }
     }
 }
