@@ -72,16 +72,16 @@ class AdminController extends Controller
      *                     type="array",
      *                     description="10 most recent admin actions",
      *                     @OA\Items(
-                         type="object",
-                         @OA\Property(property="id", type="integer"),
-                         @OA\Property(property="admin_id", type="integer"),
-                         @OA\Property(property="action", type="string"),
-                         @OA\Property(property="target_type", type="string"),
-                         @OA\Property(property="target_id", type="integer"),
-                         @OA\Property(property="description", type="string"),
-                         @OA\Property(property="severity", type="string"),
-                         @OA\Property(property="created_at", type="string", format="date-time")
-                     )
+     *                         type="object",
+     *                         @OA\Property(property="id", type="integer"),
+     *                         @OA\Property(property="admin_id", type="integer"),
+     *                         @OA\Property(property="action", type="string"),
+     *                         @OA\Property(property="target_type", type="string"),
+     *                         @OA\Property(property="target_id", type="integer"),
+     *                         @OA\Property(property="description", type="string"),
+     *                         @OA\Property(property="severity", type="string"),
+     *                         @OA\Property(property="created_at", type="string", format="date-time")
+     *                     )
      *                 )
      *             )
      *         )
@@ -102,7 +102,7 @@ class AdminController extends Controller
             'total_posts' => ForumPost::count(),
             'recent_users' => User::orderBy('created_at', 'desc')->take(5)->get(['id', 'name', 'email', 'created_at']),
             'recent_events' => Event::orderBy('created_at', 'desc')->take(5)->get(['uuid', 'title', 'created_at']),
-            'recent_admin_actions' => AdminLog::with('admin:id,name')->recent(7)->take(10)->get(),
+            'recent_admin_actions' => AdminLog::with('admin:id,uuid,first_name,last_name')->recent(7)->take(10)->get(),
         ];
 
         return response()->json([
@@ -335,7 +335,7 @@ class AdminController extends Controller
     /**
      * Unban a user
      * 
-     * @OA\Post(
+     * @OA\Put(
      *     path="/api/v1/admin/users/{user}/unban",
      *     summary="Unban a user",
      *     description="Remove ban from a previously banned user",
@@ -548,11 +548,11 @@ class AdminController extends Controller
      *     tags={"Admin"},
      *     security={{"sanctum": {}}},
      *     @OA\Parameter(
-     *         name="admin_id",
+     *         name="admin_uuid",
      *         in="query",
-     *         description="Filter by specific admin ID",
+     *         description="Filter by specific admin UUID",
      *         required=false,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string", format="uuid")
      *     ),
      *     @OA\Parameter(
      *         name="action",
@@ -569,11 +569,11 @@ class AdminController extends Controller
      *         @OA\Schema(type="string", enum={"user", "event", "post", "forum_post"})
      *     ),
      *     @OA\Parameter(
-     *         name="target_id",
+     *         name="target_uuid",
      *         in="query",
      *         description="Filter by target ID (use with target_type)",
      *         required=false,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="string")
      *     ),
      *     @OA\Parameter(
      *         name="severity",
@@ -609,7 +609,7 @@ class AdminController extends Controller
      *                     @OA\Property(property="uuid", type="string", format="uuid"),
      *                     @OA\Property(property="action", type="string"),
      *                     @OA\Property(property="target_type", type="string"),
-     *                     @OA\Property(property="target_id", type="integer"),
+     *                     @OA\Property(property="target_uuid", type="string"),
      *                     @OA\Property(property="description", type="string"),
      *                     @OA\Property(property="changes", type="object"),
      *                     @OA\Property(property="metadata", type="object"),
@@ -641,10 +641,10 @@ class AdminController extends Controller
      */
     public function logs(Request $request): JsonResponse
     {
-        $query = AdminLog::with('admin:id,name');
+        $query = AdminLog::with('admin:id,uuid,first_name,last_name,email');
 
-        if ($request->filled('admin_id')) {
-            $query->byAdmin($request->input('admin_id'));
+        if ($request->filled('admin_uuid')) {
+            $query->byAdmin($request->input('admin_uuid'));
         }
 
         if ($request->filled('action')) {
@@ -652,7 +652,7 @@ class AdminController extends Controller
         }
 
         if ($request->filled('target_type')) {
-            $query->forTarget($request->input('target_type'), $request->input('target_id'));
+            $query->forTarget($request->input('target_type'), $request->input('target_uuid'));
         }
 
         if ($request->filled('severity')) {
@@ -673,7 +673,7 @@ class AdminController extends Controller
                     'uuid' => $log->uuid,
                     'action' => $log->action,
                     'target_type' => $log->target_type,
-                    'target_id' => $log->target_id,
+                    'target_uuid' => $log->target_uuid,
                     'description' => $log->description,
                     'changes' => $log->changes,
                     'metadata' => $log->metadata,
@@ -711,8 +711,9 @@ class AdminController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"name", "email", "password", "password_confirmation"},
-     *             @OA\Property(property="name", type="string", maxLength=255, description="Full name of the admin", example="John Doe"),
+     *             required={"first_name", "last_name", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="first_name", type="string", maxLength=255, description="First name of the admin", example="John"),
+     *             @OA\Property(property="last_name", type="string", maxLength=255, description="Last name of the admin", example="Doe"),
      *             @OA\Property(property="email", type="string", format="email", maxLength=255, description="Email address (must be unique)", example="admin@university.edu"),
      *             @OA\Property(property="password", type="string", minLength=8, description="Password (minimum 8 characters)", example="SecurePass123"),
      *             @OA\Property(property="password_confirmation", type="string", description="Password confirmation", example="SecurePass123")
@@ -727,7 +728,8 @@ class AdminController extends Controller
      *                 property="data",
      *                 type="object",
      *                 @OA\Property(property="id", type="integer"),
-     *                 @OA\Property(property="name", type="string"),
+     *                 @OA\Property(property="first_name", type="string"),
+     *                 @OA\Property(property="last_name", type="string"),
      *                 @OA\Property(property="email", type="string"),
      *                 @OA\Property(property="created_at", type="string", format="date-time")
      *             )
@@ -743,13 +745,16 @@ class AdminController extends Controller
     public function createAdmin(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $admin = User::create([
-            'name' => $request->input('name'),
+            'first_name' => $request->input('first_name'),
+            'last_name' => $request->input('last_name'),
+            'name' => $request->input('first_name') . ' ' . $request->input('last_name'),
             'email' => $request->input('email'),
             'password' => Hash::make($request->input('password')),
             'is_admin' => true,
@@ -762,7 +767,7 @@ class AdminController extends Controller
             'action' => 'admin_create',
             'target_type' => 'user',
             'target_id' => $admin->id,
-            'description' => "Created new admin: {$admin->name}",
+            'description' => "Created new admin: {$admin->first_name} {$admin->last_name}",
             'ip_address' => $request->ip(),
             'severity' => 'critical',
         ]);
@@ -770,8 +775,9 @@ class AdminController extends Controller
         return response()->json([
             'message' => 'Admin created successfully',
             'data' => [
-                'id' => $admin->id,
-                'name' => $admin->name,
+                'uuid' => $admin->uuid,
+                'first_name' => $admin->first_name,
+                'last_name' => $admin->last_name,
                 'email' => $admin->email,
                 'created_at' => $admin->created_at,
             ],
@@ -833,7 +839,7 @@ class AdminController extends Controller
      */
     public function events(Request $request): JsonResponse
     {
-        $query = Event::with(['host:id,first_name,last_name,email,institution'])
+        $query = Event::with(['host:id,uuid,first_name,last_name,email,institution'])
                       ->withCount('registrations');
 
         // Apply filters
@@ -1318,7 +1324,7 @@ class AdminController extends Controller
      * Get all forum posts with filtering and pagination
      * 
      * @OA\Get(
-     *     path="/api/v1/admin/forum-posts",
+     *     path="/api/v1/admin/posts",
      *     summary="Get all forum posts for moderation",
      *     description="Retrieve forum posts with filtering options for admin moderation",
      *     operationId="getAdminForumPosts",
@@ -1370,7 +1376,7 @@ class AdminController extends Controller
      */
     public function forumPosts(Request $request): JsonResponse
     {
-        $query = ForumPost::with(['user:id,name,email', 'forum:id,title,event_id', 'forum.event:id,uuid,title']);
+        $query = ForumPost::with(['user:id,uuid,first_name,last_name,email', 'forum:id,title,event_id', 'forum.event:id,uuid,title']);
 
         if ($request->filled('forum_id')) {
             $query->where('forum_id', $request->input('forum_id'));
@@ -1408,7 +1414,7 @@ class AdminController extends Controller
      * Delete a forum post (admin only)
      * 
      * @OA\Delete(
-     *     path="/api/v1/admin/forum-posts/{post}",
+     *     path="/api/v1/admin/posts/{post}",
      *     summary="Delete a forum post (admin moderation)",
      *     description="Delete a forum post as part of content moderation with reason logging",
      *     operationId="deleteForumPost",

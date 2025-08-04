@@ -375,7 +375,7 @@ class AnalyticsController extends Controller
             $query->where('occurred_at', '<=', $request->input('end_date'));
         }
 
-        $events = $query->with('user:id,name')
+        $events = $query->with('user:id,uuid,first_name,last_name')
             ->orderBy('occurred_at', 'desc')
             ->paginate($request->input('per_page', 50));
 
@@ -498,9 +498,10 @@ class AnalyticsController extends Controller
             'data' => [
                 'date' => $targetDate->toDateString(),
                 'metrics_generated' => array_keys($generatedMetrics),
-                'user_engagement' => $generatedMetrics['user_engagement'] ?? [],
-                'event_activity' => $generatedMetrics['event_activity'] ?? [],
-                'forum_metrics' => $generatedMetrics['forum_activity'] ?? [],
+                'user_engagement' => $generatedMetrics['users'] ?? [],
+                'event_activity' => $generatedMetrics['events'] ?? [],
+                'forum_metrics' => $generatedMetrics['forum'] ?? [],
+                'platform_overview' => $generatedMetrics['platform'] ?? [],
             ],
         ]);
     }

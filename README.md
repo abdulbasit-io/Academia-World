@@ -11,9 +11,9 @@ A comprehensive academic event management and collaboration platform built with 
 
 Academia World is a platform that empowers academic institutions, researchers, and educators to:
 
-- **Event Management**: Create, manage, and participate in academic conferences, workshops, and seminars
+- **Event Management**: Create, manage, and participate in academic conferences, workshops, and seminars with poster upload
 - **Academic Networking**: Connect with fellow researchers and build professional relationships
-- **Resource Sharing**: Upload, share, and access academic resources and materials
+- **Resource Sharing**: Upload, share, and access academic resources and materials with direct download links
 - **Discussion Forums**: Engage in academic discourse through structured discussion forums
 - **User Management**: Comprehensive user profiles with institutional affiliations and academic credentials
 
@@ -36,7 +36,9 @@ Academia World is a platform that empowers academic institutions, researchers, a
 - Email verification and account management
 - Real-time notifications and event reminders
 - Comprehensive admin dashboard with audit logging
-- Multi-format file upload and management
+- Multi-format file upload and management (images, documents, videos)
+- Event poster upload and management with automatic image processing
+- Resource sharing with public URL access and download tracking
 - Advanced search and filtering capabilities
 
 ## 📋 Prerequisites
@@ -257,9 +259,12 @@ server {
 
 Academia World provides comprehensive API documentation through OpenAPI 3.0 specification.
 
-### Accessing Documentation
-- **Development**: `http://localhost:8000/api/documentation`
+### Documentation Access
+- **Swagger UI**: `http://localhost:8000/api/documentation` (interactive)
+- **API Reference**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (detailed guide)
 - **Production**: `https://your-domain.com/api/documentation`
+
+> **Note**: The OpenAPI documentation is automatically generated from controller annotations. Run `php artisan l5-swagger:generate` to update after making changes.
 
 ### Authentication
 The API uses Laravel Sanctum for authentication. Include the token in the Authorization header:
@@ -282,6 +287,21 @@ Authorization: Bearer your-api-token
 - `GET /api/v1/events/{event}` - Get event details
 - `PUT /api/v1/events/{event}` - Update event
 - `DELETE /api/v1/events/{event}` - Delete event
+- `POST /api/v1/events/{event}/register` - Register for event
+- `DELETE /api/v1/events/{event}/unregister` - Unregister from event
+
+#### Event Poster Management
+- `POST /api/v1/events/{event}/poster` - Upload event poster
+- `PUT /api/v1/events/{event}/poster` - Update event poster
+- `DELETE /api/v1/events/{event}/poster` - Delete event poster
+
+#### Event Resources
+- `GET /api/v1/events/{event}/resources` - List event resources
+- `POST /api/v1/events/{event}/resources` - Upload event resource
+- `GET /api/v1/resources/{resource}` - Get resource details
+- `PUT /api/v1/resources/{resource}` - Update resource
+- `DELETE /api/v1/resources/{resource}` - Delete resource
+- `GET /api/v1/resources/{resource}/download` - Download resource
 
 #### Forums
 - `GET /api/v1/events/{event}/forums` - List event forums
@@ -328,6 +348,46 @@ curl -X POST https://your-domain.com/api/v1/events \
     "capacity": 200,
     "status": "published"
   }'
+```
+
+#### Upload Event Poster (Multipart Form Data)
+```bash
+curl -X POST https://your-domain.com/api/v1/events/{event_uuid}/poster \
+  -H "Authorization: Bearer your-api-token" \
+  -H "Accept: application/json" \
+  -F "poster=@/path/to/poster.jpg"
+```
+
+#### Upload Event Poster (Base64 JSON)
+```bash
+curl -X POST https://your-domain.com/api/v1/events/{event_uuid}/poster \
+  -H "Authorization: Bearer your-api-token" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "poster": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ..."
+  }'
+```
+
+#### Upload Event Resource
+```bash
+curl -X POST https://your-domain.com/api/v1/events/{event_uuid}/resources \
+  -H "Authorization: Bearer your-api-token" \
+  -H "Accept: application/json" \
+  -F "file=@/path/to/presentation.pdf" \
+  -F "title=Conference Presentation" \
+  -F "description=Main keynote presentation slides" \
+  -F "resource_type=presentation" \
+  -F "is_public=true" \
+  -F "is_downloadable=true" \
+  -F "requires_registration=false"
+```
+
+#### Delete Event Poster
+```bash
+curl -X DELETE https://your-domain.com/api/v1/events/{event_uuid}/poster \
+  -H "Authorization: Bearer your-api-token" \
+  -H "Accept: application/json"
 ```
 
 ## 🧪 Testing
@@ -420,6 +480,41 @@ php artisan queue:work
 # Generate API documentation
 php artisan l5-swagger:generate
 ```
+
+### IDE Support & Static Analysis
+
+Academia World includes comprehensive IDE support to minimize false positives and improve developer experience:
+
+```bash
+# Generate IDE helper files (run after model changes)
+composer ide-helper
+
+# Or run individual commands:
+php artisan ide-helper:generate
+php artisan ide-helper:models --write
+php artisan ide-helper:meta
+
+# Use the development setup script for comprehensive setup
+./scripts/dev-setup.sh all
+
+# Or run specific tasks:
+./scripts/dev-setup.sh ide        # Regenerate IDE helpers
+./scripts/dev-setup.sh permissions # Fix file permissions
+./scripts/dev-setup.sh cache      # Clear caches
+./scripts/dev-setup.sh optimize   # Development optimization
+```
+
+### Avoiding Common Issues
+
+**IDE/Static Analysis Warnings:**
+- Laravel IDE Helper package is installed and configured
+- PHPStan configuration includes rules to ignore common Eloquent false positives
+- IDE helper files are automatically excluded from git tracking
+
+**Read-Only File Conflicts:**
+- IDE helper files are excluded from version control
+- Development script handles file permissions automatically
+- Clear regeneration process prevents stale file issues
 
 ### Code Quality Tools
 ```bash

@@ -125,11 +125,11 @@ class AnalyticsService
     {
         try {
             // Try from analytics events first
-            $eventViews = AnalyticsEvent::where('action', 'event_view')
+            $eventViews = AnalyticsEvent::where('action_type', 'event_view')
                 ->where('occurred_at', '>=', Carbon::now()->subDays(30))
                 ->count();
 
-            $eventRegistrations = AnalyticsEvent::where('action', 'event_registration')
+            $eventRegistrations = AnalyticsEvent::where('action_type', 'event_registration')
                 ->where('occurred_at', '>=', Carbon::now()->subDays(30))
                 ->count();
 
@@ -172,11 +172,11 @@ class AnalyticsService
     {
         try {
             // Try from analytics events first
-            $forumPosts = AnalyticsEvent::where('action', 'post_creation')
+            $forumPosts = AnalyticsEvent::where('action_type', 'post_creation')
                 ->where('occurred_at', '>=', Carbon::now()->subDays(30))
                 ->count();
 
-            $forumLikes = AnalyticsEvent::where('action', 'post_like')
+            $forumLikes = AnalyticsEvent::where('action_type', 'post_like')
                 ->where('occurred_at', '>=', Carbon::now()->subDays(30))
                 ->count();
 
@@ -209,7 +209,7 @@ class AnalyticsService
                 'new_posts_30d' => 0,
                 'post_likes_30d' => 0,
                 'active_discussions' => 0,
-                'total_discussions' => ForumPost::whereNull('parent_uuid')->count(),
+                'total_discussions' => ForumPost::whereNull('parent_id')->count(),
             ];
         }
     }
@@ -254,11 +254,34 @@ class AnalyticsService
     private function storePlatformMetrics(array $metrics): void
     {
         try {
-            PlatformMetric::create([
-                'metric_type' => 'daily_summary',
-                'metric_date' => Carbon::now()->toDateString(),
-                'data' => $metrics,
-            ]);
+            $today = Carbon::now()->toDateString();
+            
+            // Store individual metric types for easier querying
+            PlatformMetric::updateOrCreate(
+                ['metric_type' => 'user_engagement', 'metric_key' => 'daily_stats', 'metric_date' => $today],
+                ['value' => $metrics['users']]
+            );
+            
+            PlatformMetric::updateOrCreate(
+                ['metric_type' => 'event_activity', 'metric_key' => 'daily_stats', 'metric_date' => $today],
+                ['value' => $metrics['events']]
+            );
+            
+            PlatformMetric::updateOrCreate(
+                ['metric_type' => 'forum_activity', 'metric_key' => 'daily_stats', 'metric_date' => $today],
+                ['value' => $metrics['forum']]
+            );
+            
+            PlatformMetric::updateOrCreate(
+                ['metric_type' => 'platform_overview', 'metric_key' => 'daily_stats', 'metric_date' => $today],
+                ['value' => $metrics['platform']]
+            );
+            
+            // Also store complete summary
+            PlatformMetric::updateOrCreate(
+                ['metric_type' => 'daily_summary', 'metric_key' => 'complete_metrics', 'metric_date' => $today],
+                ['value' => $metrics]
+            );
         } catch (\Exception $e) {
             Log::error('Failed to store platform metrics', ['error' => $e->getMessage()]);
         }
@@ -379,10 +402,11 @@ class AnalyticsService
                 PlatformMetric::updateOrCreate(
                     [
                         'metric_type' => $type,
+                        'metric_key' => 'daily_stats',
                         'metric_date' => $date->toDateString(),
                     ],
                     [
-                        'data' => $data,
+                        'value' => $data,
                         'updated_at' => now(),
                     ]
                 );
@@ -399,12 +423,7 @@ class AnalyticsService
                 'date' => $date->toDateString(),
                 'error' => $e->getMessage(),
             ]);
-            return [
-                'user_engagement' => $this->getFallbackMetrics()['users'],
-                'event_activity' => $this->getFallbackMetrics()['events'],
-                'forum_activity' => $this->getFallbackMetrics()['forum'],
-                'platform_overview' => $this->getFallbackMetrics()['platform'],
-            ];
+            return $this->getFallbackMetrics();
         }
     }
 

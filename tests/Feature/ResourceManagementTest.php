@@ -144,7 +144,15 @@ it('can upload a resource as event host', function () {
     
     // Check file was stored
     $resource = EventResource::where('title', 'Conference Presentation')->first();
-    expect(Storage::disk('public')->exists($resource->file_path))->toBeTrue();
+    
+    // Check that file_path is a complete URL (not just a path)
+    expect($resource->file_path)->toStartWith('http');
+    
+    // For local storage, verify file exists by extracting path from URL
+    if (str_contains($resource->file_path, '/storage/')) {
+        $path = str_replace(config('app.url') . '/storage/', '', $resource->file_path);
+        expect(Storage::disk('public')->exists($path))->toBeTrue();
+    }
 });
 
 it('prevents non-host from uploading resources', function () {

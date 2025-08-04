@@ -7,6 +7,45 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property int $admin_id
+ * @property string $action
+ * @property string $target_type
+ * @property int $target_id
+ * @property string $description
+ * @property array<array-key, mixed>|null $changes
+ * @property array<array-key, mixed>|null $metadata
+ * @property string|null $ip_address
+ * @property string $severity
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\User $admin
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog action($action)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog byAdmin($adminId)
+ * @method static \Database\Factories\AdminLogFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog forTarget($targetType, $targetId = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog recent($days = 7)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog severity($severity)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereAction($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereAdminId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereChanges($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereIpAddress($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereMetadata($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereSeverity($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereTargetId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereTargetType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|AdminLog whereUuid($value)
+ * @mixin \Eloquent
+ */
 class AdminLog extends Model
 {
     use HasFactory;

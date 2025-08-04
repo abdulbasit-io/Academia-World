@@ -89,8 +89,9 @@ class AnalyticsTest extends TestCase
     {
         // Create some platform metrics
         PlatformMetric::create([
-            'metric_name' => 'daily_active_users',
-            'metric_value' => 150,
+            'metric_type' => 'user_engagement',
+            'metric_key' => 'daily_active_users',
+            'value' => ['count' => 150],
             'metric_date' => now()->format('Y-m-d'),
         ]);
 

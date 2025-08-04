@@ -569,6 +569,13 @@ class EventManagementTest extends TestCase
         
         $event = Event::latest()->first();
         $this->assertNotNull($event->poster);
-        $this->assertTrue(Storage::disk('public')->exists($event->poster));
+        // Check that poster is a complete URL (not just a path)
+        $this->assertStringStartsWith('http', $event->poster);
+        
+        // For local storage, verify file exists by extracting path from URL
+        if (str_contains($event->poster, '/storage/')) {
+            $path = str_replace(config('app.url') . '/storage/', '', $event->poster);
+            $this->assertTrue(Storage::disk('public')->exists($path));
+        }
     }
 }

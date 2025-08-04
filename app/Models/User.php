@@ -12,30 +12,86 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
 
 /**
+ * @property int $id
  * @property string $uuid
  * @property string $name
  * @property string $first_name
  * @property string $last_name
  * @property string $email
- * @property string $password
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property string|null $avatar
  * @property string|null $bio
- * @property string $institution
+ * @property string|null $institution
  * @property string|null $department
  * @property string|null $position
  * @property string|null $website
  * @property string|null $phone
- * @property array<string, mixed>|null $social_links
+ * @property array<array-key, mixed>|null $social_links
  * @property string $account_status
- * @property array<string, mixed>|null $preferences
- * @property \Illuminate\Support\Carbon|null $last_login_at
  * @property bool $is_admin
  * @property bool $is_banned
  * @property string|null $ban_reason
  * @property \Illuminate\Support\Carbon|null $banned_at
- * @property \Illuminate\Support\Carbon|null $email_verified_at
+ * @property \Illuminate\Support\Carbon|null $last_login_at
+ * @property array<array-key, mixed>|null $preferences
+ * @property string $password
+ * @property string|null $remember_token
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $connections
+ * @property-read int|null $connections_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Event> $events
+ * @property-read int|null $events_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ForumPost> $forumPosts
+ * @property-read int|null $forum_posts_count
+ * @property-read string $full_name
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Event> $hostedEvents
+ * @property-read int|null $hosted_events_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ForumPost> $likedPosts
+ * @property-read int|null $liked_posts_count
+ * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
+ * @property-read int|null $notifications_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserConnection> $receivedConnectionRequests
+ * @property-read int|null $received_connection_requests_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Event> $registeredEvents
+ * @property-read int|null $registered_events_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Event> $registrations
+ * @property-read int|null $registrations_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserConnection> $sentConnectionRequests
+ * @property-read int|null $sent_connection_requests_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \Laravel\Sanctum\PersonalAccessToken> $tokens
+ * @property-read int|null $tokens_count
+ * @method static \Database\Factories\UserFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAccountStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereAvatar($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereBanReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereBannedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereBio($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereDepartment($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereEmail($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereEmailVerifiedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereFirstName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereInstitution($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereIsAdmin($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereIsBanned($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereLastLoginAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereLastName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User wherePassword($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User wherePhone($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User wherePosition($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User wherePreferences($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereRememberToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereSocialLinks($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|User whereWebsite($value)
+ * @mixin \Eloquent
  */
 class User extends Authenticatable
 {

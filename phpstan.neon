@@ -13,6 +13,18 @@ parameters:
         - '#view-string\|null, string given#'
         - '#generic class.*but does not specify its types: TFactory#'
         - '#does not specify its types: TFactory#'
+        # Ignore common Eloquent false positives
+        - '#Call to an undefined method App\\Models\\.*::(first|get|where|orderBy|with|withCount|paginate|create|update|delete)#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*::(first|get|where|orderBy|with|withCount|paginate)#'
+        - '#Call to an undefined method Illuminate\\Database\\Query\\Builder.*::(first|get|where|orderBy|paginate)#'
+        - '#Property App\\Models\\.*::\$.*does not exist#'
+        # Ignore Laravel Collection method warnings
+        - '#Call to an undefined method Illuminate\\Support\\Collection.*::map#'
+        - '#Call to an undefined method Illuminate\\Pagination\\LengthAwarePaginator.*::map#'
         
     excludePaths:
         - ./*/*/FileToBeExcluded.php
+        # Exclude IDE helper files
+        - _ide_helper.php
+        - _ide_helper_models.php
+        - .phpstorm.meta.php

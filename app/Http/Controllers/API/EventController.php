@@ -8,6 +8,8 @@ use App\Jobs\SendAdminNotification;
 use App\Jobs\SendEventReminder;
 use App\Mail\EventRegistrationConfirmation;
 use App\Services\AnalyticsService;
+use App\Services\FileStorageService;
+use App\Traits\HandlesBase64Uploads;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -24,6 +26,8 @@ use Illuminate\Support\Facades\Mail;
  */
 class EventController extends Controller
 {
+    use HandlesBase64Uploads;
+    
     public function __construct(private AnalyticsService $analyticsService)
     {
         // Constructor injection for AnalyticsService
@@ -203,9 +207,38 @@ class EventController extends Controller
             $data['timezone'] = $data['timezone'] ?? 'UTC';
 
             // Handle poster upload
+            $posterFile = null;
+            
             if ($request->hasFile('poster')) {
-                $posterPath = $request->file('poster')->store('event-posters', 'public');
-                $data['poster'] = $posterPath;
+                // Traditional file upload
+                $posterFile = $request->file('poster');
+            } elseif ($request->has('poster') && is_string($request->input('poster'))) {
+                // Base64 upload
+                $base64Data = $request->input('poster');
+                if ($this->isBase64Image($base64Data)) {
+                    try {
+                        $posterFile = $this->createUploadedFileFromBase64($base64Data, 'poster.jpg');
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to process base64 poster', [
+                            'user_id' => Auth::id(),
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+            
+            if ($posterFile) {
+                $fileStorageService = new FileStorageService();
+                $filename = 'event_poster_' . time() . '.' . $posterFile->getClientOriginalExtension();
+                $path = 'event-posters/' . $filename;
+                
+                $posterUrl = $fileStorageService->storeImage($posterFile, $path, [
+                    'width' => 800,
+                    'height' => 600,
+                    'fit' => 'fill'
+                ]);
+                
+                $data['poster'] = $posterUrl;
             }
 
             $event = Event::create($data);
@@ -401,12 +434,45 @@ class EventController extends Controller
             $data = $request->all();
 
             // Handle poster upload
+            $posterFile = null;
+            
             if ($request->hasFile('poster')) {
+                // Traditional file upload
+                $posterFile = $request->file('poster');
+            } elseif ($request->has('poster') && is_string($request->input('poster'))) {
+                // Base64 upload
+                $base64Data = $request->input('poster');
+                if ($this->isBase64Image($base64Data)) {
+                    try {
+                        $posterFile = $this->createUploadedFileFromBase64($base64Data, 'poster.jpg');
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to process base64 poster for update', [
+                            'user_id' => Auth::id(),
+                            'event_id' => $event->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+            
+            if ($posterFile) {
+                $fileStorageService = new FileStorageService();
+                
                 // Delete old poster
                 if ($event->poster) {
-                    Storage::disk('public')->delete($event->poster);
+                    $fileStorageService->delete($event->poster);
                 }
-                $data['poster'] = $request->file('poster')->store('event-posters', 'public');
+                
+                $filename = 'event_poster_' . $event->id . '_' . time() . '.' . $posterFile->getClientOriginalExtension();
+                $path = 'event-posters/' . $filename;
+                
+                $posterUrl = $fileStorageService->storeImage($posterFile, $path, [
+                    'width' => 800,
+                    'height' => 600,
+                    'fit' => 'fill'
+                ]);
+                
+                $data['poster'] = $posterUrl;
             }
 
             $event->update($data);
@@ -469,18 +535,26 @@ class EventController extends Controller
         }
 
         try {
-            // Delete poster if exists
-            if ($event->poster) {
-                Storage::disk('public')->delete($event->poster);
-            }
-
+            // Soft delete the event (don't delete poster - event can be restored)
             $event->delete();
+
+            Log::info('Event soft deleted successfully', [
+                'event_id' => $event->id,
+                'event_title' => $event->title,
+                'user_id' => $user->id
+            ]);
 
             return response()->json([
                 'message' => 'Event deleted successfully'
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Event deletion failed', [
+                'event_id' => $event->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+            
             return response()->json([
                 'message' => 'Failed to delete event',
                 'error' => 'Something went wrong. Please try again.'
@@ -656,6 +730,7 @@ class EventController extends Controller
     {
         $registration = $event->registrations()
             ->where('user_id', Auth::id())
+            ->wherePivot('status', 'registered')
             ->first();
 
         if (!$registration) {
@@ -665,7 +740,17 @@ class EventController extends Controller
         }
 
         try {
-            $event->registrations()->detach(Auth::id());
+            // Update registration status to cancelled instead of deleting
+            $event->registrations()->updateExistingPivot(Auth::id(), [
+                'status' => 'cancelled',
+                'cancelled_at' => now()
+            ]);
+
+            Log::info('User cancelled event registration', [
+                'user_id' => Auth::id(),
+                'event_id' => $event->id,
+                'event_title' => $event->title
+            ]);
 
             // Track event unregistration analytics
             $this->analyticsService->trackEngagement('event_unregistration', [
@@ -675,17 +760,23 @@ class EventController extends Controller
                     'event_title' => $event->title,
                     'event_status' => $event->status,
                     'location_type' => $event->location_type,
-                    'registration_status' => 'unregistered',
+                    'registration_status' => 'cancelled',
                 ]
             ]);
 
             return response()->json([
-                'message' => 'Successfully unregistered from the event'
+                'message' => 'Successfully cancelled your registration for the event'
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Registration cancellation failed', [
+                'user_id' => Auth::id(),
+                'event_id' => $event->id,
+                'error' => $e->getMessage()
+            ]);
+            
             return response()->json([
-                'message' => 'Unregistration failed',
+                'message' => 'Registration cancellation failed',
                 'error' => 'Something went wrong. Please try again.'
             ], 500);
         }
@@ -1180,5 +1271,276 @@ class EventController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/v1/events/{event}/poster",
+     *     tags={"Events"},
+     *     summary="Upload event poster",
+     *     description="Upload a poster for an event (host only)",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="event",
+     *         in="path",
+     *         description="Event UUID",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(property="poster", type="string", format="binary", description="Poster image file")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Poster uploaded successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="poster_url", type="string")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Not authorized"),
+     *     @OA\Response(response=422, description="Validation errors")
+     * )
+     */
+    public function uploadPoster(Request $request, Event $event): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Check permissions - only event host or admin can upload poster
+        if (!$user || ($user->id !== $event->host_id && !$user->isAdmin())) {
+            return response()->json([
+                'message' => 'You are not authorized to upload poster for this event'
+            ], 403);
+        }
+        
+        // Custom validation for both file upload and base64
+        $validator = Validator::make($request->all(), [
+            'poster' => 'required'
+        ]);
+        
+        // Add custom validation for image format
+        $validator->after(function ($validator) use ($request) {
+            $poster = $request->input('poster');
+            
+            if ($request->hasFile('poster')) {
+                // Validate uploaded file
+                $file = $request->file('poster');
+                if (!$file->isValid()) {
+                    $validator->errors()->add('poster', 'The uploaded file is not valid.');
+                    return;
+                }
+                
+                if (!in_array($file->getClientOriginalExtension(), ['jpeg', 'jpg', 'png', 'gif'])) {
+                    $validator->errors()->add('poster', 'The poster must be a file of type: jpeg, jpg, png, gif.');
+                    return;
+                }
+                
+                if ($file->getSize() > 2048 * 1024) { // 2MB in bytes
+                    $validator->errors()->add('poster', 'The poster may not be greater than 2048 kilobytes.');
+                    return;
+                }
+                
+                // Check if it's actually an image
+                $imageInfo = getimagesize($file->getPathname());
+                if (!$imageInfo) {
+                    $validator->errors()->add('poster', 'The poster must be an image.');
+                }
+            } elseif (is_string($poster)) {
+                // Validate base64 string
+                if (!$this->isBase64Image($poster)) {
+                    $validator->errors()->add('poster', 'The poster must be a valid base64 encoded image.');
+                    return;
+                }
+                
+                // Check base64 size (approximate)
+                $base64Size = (strlen($poster) * 3 / 4) - substr_count($poster, '=');
+                if ($base64Size > 2048 * 1024) { // 2MB
+                    $validator->errors()->add('poster', 'The poster may not be greater than 2048 kilobytes.');
+                }
+            } else {
+                $validator->errors()->add('poster', 'The poster must be a valid image file or base64 encoded image.');
+            }
+        });
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        try {
+            // Handle both multipart/form-data and JSON with base64
+            $posterFile = null;
+            
+            if ($request->hasFile('poster')) {
+                $posterFile = $request->file('poster');
+            } elseif ($request->has('poster') && is_string($request->input('poster'))) {
+                $base64Data = $request->input('poster');
+                if ($this->isBase64Image($base64Data)) {
+                    try {
+                        $posterFile = $this->createUploadedFileFromBase64($base64Data, 'poster.jpg');
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to process base64 poster', [
+                            'user_id' => Auth::id(),
+                            'event_id' => $event->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+            
+            if (!$posterFile) {
+                return response()->json([
+                    'message' => 'Validation errors',
+                    'errors' => [
+                        'poster' => ['The poster field is required and must be a valid image file or base64 encoded image.']
+                    ]
+                ], 422);
+            }
+            
+            // Delete old poster if exists
+            if ($event->poster) {
+                $fileStorageService = new FileStorageService();
+                $fileStorageService->delete($event->poster);
+            }
+            
+            // Upload new poster
+            $fileStorageService = new FileStorageService();
+            $filename = 'event_poster_' . $event->id . '_' . time() . '.' . $posterFile->getClientOriginalExtension();
+            $path = 'event-posters/' . $filename;
+            
+            $posterUrl = $fileStorageService->storeImage($posterFile, $path, [
+                'width' => 800,
+                'height' => 600,
+                'quality' => 90
+            ]);
+            
+            // Update event with new poster URL
+            $event->update(['poster' => $posterUrl]);
+            
+            Log::info('Event poster uploaded successfully', [
+                'event_id' => $event->id,
+                'user_id' => $user->id,
+                'poster_url' => $posterUrl
+            ]);
+            
+            return response()->json([
+                'message' => 'Poster uploaded successfully',
+                'data' => [
+                    'poster_url' => $posterUrl
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Event poster upload failed', [
+                'event_id' => $event->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to upload poster',
+                'error' => 'Something went wrong. Please try again.'
+            ], 500);
+        }
+    }
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/events/{event}/poster",
+     *     tags={"Events"},
+     *     summary="Delete event poster",
+     *     description="Remove the poster from an event (host only)",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="event",
+     *         in="path",
+     *         description="Event UUID",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Poster deleted successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Not authorized"),
+     *     @OA\Response(response=404, description="No poster found")
+     * )
+     */
+    public function deletePoster(Request $request, Event $event): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Check permissions - only event host or admin can delete poster
+        if (!$user || ($user->id !== $event->host_id && !$user->isAdmin())) {
+            return response()->json([
+                'message' => 'You are not authorized to delete poster for this event'
+            ], 403);
+        }
+        
+        if (!$event->poster) {
+            return response()->json([
+                'message' => 'No poster found for this event'
+            ], 404);
+        }
+        
+        try {
+            // Delete poster file from storage
+            $fileStorageService = new FileStorageService();
+            $fileStorageService->delete($event->poster);
+            
+            // Remove poster URL from event
+            $event->update(['poster' => null]);
+            
+            Log::info('Event poster deleted successfully', [
+                'event_id' => $event->id,
+                'user_id' => $user->id
+            ]);
+            
+            return response()->json([
+                'message' => 'Poster deleted successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Event poster deletion failed', [
+                'event_id' => $event->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to delete poster',
+                'error' => 'Something went wrong. Please try again.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Check if the given string is a valid base64-encoded image.
+     */
+    private function isBase64Image(string $data): bool
+    {
+        // Check for data URI scheme
+        if (preg_match('/^data:image\/(\w+);base64,/', $data)) {
+            $data = substr($data, strpos($data, ',') + 1);
+        }
+        // Check if valid base64
+        if (base64_decode($data, true) === false) {
+            return false;
+        }
+        // Try to get image size from decoded data
+        $imageData = base64_decode($data);
+        return @getimagesizefromstring($imageData) !== false;
     }
 }

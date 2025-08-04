@@ -4,6 +4,8 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\FileStorageService;
+use App\Traits\HandlesBase64Uploads;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -21,6 +23,7 @@ use Intervention\Image\Drivers\Gd\Driver;
  */
 class UserController extends Controller
 {
+    use HandlesBase64Uploads;
     /**
      * @OA\Get(
      *     path="/api/v1/profile",
@@ -292,14 +295,79 @@ class UserController extends Controller
      */
     public function updateAvatar(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        // Debug logging to understand what's being received
+        Log::info('Avatar upload request received', [
+            'user_id' => Auth::id(),
+            'content_type' => $request->header('Content-Type'),
+            'has_file' => $request->hasFile('avatar'),
+            'has_avatar_input' => $request->has('avatar'),
+            'request_method' => $request->method(),
+            'all_keys' => array_keys($request->all()),
+            'files_keys' => array_keys($request->allFiles()),
+            'raw_content' => substr($request->getContent(), 0, 200), // First 200 chars
+            'is_json' => $request->isJson(),
+            'content_length' => $request->header('Content-Length'),
+        ]);
+
+        // Handle both multipart/form-data and JSON with base64
+        $avatarFile = null;
+        
+        if ($request->hasFile('avatar')) {
+            // Traditional file upload
+            $avatarFile = $request->file('avatar');
+        } elseif ($request->has('avatar') && is_string($request->input('avatar'))) {
+            // Base64 upload
+            $base64Data = $request->input('avatar');
+            if ($this->isBase64Image($base64Data)) {
+                try {
+                    $avatarFile = $this->createUploadedFileFromBase64($base64Data, 'avatar.jpg');
+                } catch (\Exception $e) {
+                    Log::warning('Failed to process base64 avatar', [
+                        'user_id' => Auth::id(),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
+
+        if (!$avatarFile) {
+            Log::warning('No valid avatar file found in request', [
+                'user_id' => Auth::id(),
+                'content_type' => $request->header('Content-Type'),
+                'has_file' => $request->hasFile('avatar'),
+                'has_avatar_input' => $request->has('avatar'),
+                'avatar_type' => $request->has('avatar') ? gettype($request->input('avatar')) : 'none'
+            ]);
+
+            return response()->json([
+                'message' => 'Validation errors',
+                'errors' => [
+                    'avatar' => ['The avatar field is required and must be a valid image file or base64 encoded image.']
+                ],
+                'debug' => [
+                    'content_type' => $request->header('Content-Type'),
+                    'has_file' => $request->hasFile('avatar'),
+                    'has_input' => $request->has('avatar'),
+                    'all_keys' => array_keys($request->all()),
+                    'files_keys' => array_keys($request->allFiles()),
+                ]
+            ], 422);
+        }
+
+        // Validate the file
+        $validator = Validator::make(['avatar' => $avatarFile], [
             'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
         ]);
 
         if ($validator->fails()) {
             Log::warning('Avatar upload validation failed', [
                 'user_id' => Auth::id(),
-                'errors' => $validator->errors()->toArray()
+                'errors' => $validator->errors()->toArray(),
+                'file_info' => [
+                    'original_name' => $avatarFile->getClientOriginalName(),
+                    'mime_type' => $avatarFile->getMimeType(),
+                    'size' => $avatarFile->getSize(),
+                ]
             ]);
 
             return response()->json([
@@ -318,9 +386,11 @@ class UserController extends Controller
                 ], 401);
             }
 
+            $fileStorageService = new FileStorageService();
+
             // Delete old avatar if exists
             if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
+                $fileStorageService->delete($user->avatar);
                 Log::info('Old avatar deleted', [
                     'user_id' => $user->id,
                     'old_avatar' => $user->avatar
@@ -330,30 +400,27 @@ class UserController extends Controller
             // Process and store new avatar
             $avatarFile = $request->file('avatar');
             $filename = 'avatar_' . $user->id . '_' . time() . '.' . $avatarFile->getClientOriginalExtension();
+            $path = 'avatars/' . $filename;
             
-            // Create image manager and resize image
-            $manager = new ImageManager(new Driver());
-            $image = $manager->read($avatarFile->getPathname());
-            
-            // Resize to 300x300 while maintaining aspect ratio
-            $image->cover(300, 300);
-            
-            // Save to storage
-            $avatarPath = 'avatars/' . $filename;
-            Storage::disk('public')->put($avatarPath, $image->encode());
+            // Store image with resizing (300x300)
+            $avatarUrl = $fileStorageService->storeImage($avatarFile, $path, [
+                'width' => 300,
+                'height' => 300,
+                'fit' => 'cover'
+            ]);
 
-            // Update user avatar path
-            $user->update(['avatar' => $avatarPath]);
+            // Update user avatar URL (store complete URL, not path)
+            $user->update(['avatar' => $avatarUrl]);
 
             Log::info('Avatar uploaded successfully', [
                 'user_id' => $user->id,
-                'avatar_path' => $avatarPath,
+                'avatar_url' => $avatarUrl,
                 'file_size' => $avatarFile->getSize()
             ]);
 
             return response()->json([
                 'message' => 'Avatar updated successfully',
-                'avatar_url' => Storage::url($avatarPath)
+                'avatar_url' => $avatarUrl
             ]);
 
         } catch (\Exception $e) {
@@ -406,8 +473,10 @@ class UserController extends Controller
                 ], 400);
             }
 
+            $fileStorageService = new FileStorageService();
+
             // Delete avatar file from storage
-            Storage::disk('public')->delete($user->avatar);
+            $fileStorageService->delete($user->avatar);
             
             // Update user record
             $oldAvatar = $user->avatar;
@@ -515,6 +584,24 @@ class UserController extends Controller
                 'error' => 'Something went wrong. Please try again.'
             ], 500);
         }
+    }
+
+    /**
+     * Check if the given string is a valid base64-encoded image.
+     */
+    private function isBase64Image(string $data): bool
+    {
+        // Check for data URI scheme
+        if (preg_match('/^data:image\/(\w+);base64,/', $data)) {
+            $data = substr($data, strpos($data, ',') + 1);
+        }
+        // Check if valid base64
+        if (base64_decode($data, true) === false) {
+            return false;
+        }
+        // Try to get image size from decoded data
+        $imageData = base64_decode($data);
+        return @getimagesizefromstring($imageData) !== false;
     }
 
     /**

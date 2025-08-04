@@ -66,6 +66,10 @@ Route::prefix('v1')->middleware(['cookie.auth', 'auth:sanctum'])->group(function
     Route::get('my-events', [EventController::class, 'myEvents']);
     Route::get('my-registrations', [EventController::class, 'myRegistrations']);
     
+    // Event poster management routes
+    Route::post('events/{event}/poster', [EventController::class, 'uploadPoster']);
+    Route::delete('events/{event}/poster', [EventController::class, 'deletePoster']);
+    
     // Resource management routes (protected)
     Route::post('events/{event}/resources', [ResourceController::class, 'store']);
     Route::put('resources/{resource}', [ResourceController::class, 'update']);
@@ -111,6 +115,7 @@ Route::prefix('v1')->middleware(['cookie.auth', 'auth:sanctum'])->group(function
         Route::get('users', [AdminController::class, 'users']);
         Route::post('users', [AdminController::class, 'createAdmin']);
         Route::put('users/{user}/ban', [AdminController::class, 'banUser']);
+        Route::put('users/{user}/unban', [AdminController::class, 'unbanUser']);
         Route::post('users/{user}/promote', [AdminController::class, 'promoteUser']);
         Route::post('users/{user}/demote', [AdminController::class, 'demoteUser']);
         

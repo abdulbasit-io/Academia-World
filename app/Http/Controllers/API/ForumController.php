@@ -64,7 +64,7 @@ class ForumController extends Controller
     public function index(Event $event): JsonResponse
     {
         $forums = $event->forums()
-            ->with(['creator:id,name', 'latestPost.user:id,name'])
+            ->with(['creator:id,uuid,first_name,last_name', 'latestPost.user:id,uuid,first_name,last_name'])
             ->active()
             ->orderBy('type')
             ->orderBy('created_at', 'desc')
@@ -83,10 +83,11 @@ class ForumController extends Controller
                     'participant_count' => $forum->participant_count,
                     'last_activity_at' => $forum->last_activity_at,
                     'creator' => $forum->creator ? [
-                        'name' => $forum->creator->name
+                        'uuid' => $forum->creator->uuid,
+                        'name' => $forum->creator->first_name . ' ' . $forum->creator->last_name
                     ] : null,
                     'latest_post' => $forum->latestPost->first() ? [
-                        'user' => $forum->latestPost->first()->user->name,
+                        'user' => $forum->latestPost->first()->user->first_name . ' ' . $forum->latestPost->first()->user->last_name,
                         'created_at' => $forum->latestPost->first()->created_at,
                     ] : null,
                     'created_at' => $forum->created_at,

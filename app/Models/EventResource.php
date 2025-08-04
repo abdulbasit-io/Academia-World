@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 
 /**
  * @template TFactory of \Illuminate\Database\Eloquent\Factories\Factory
+ * @property int $id
  * @property string $uuid
  * @property int $event_id
  * @property int $uploaded_by
@@ -30,6 +31,38 @@ use Illuminate\Support\Str;
  * @property string $status
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Event $event
+ * @property-read \App\Models\User $uploadedBy
+ * @method static Builder<static>|EventResource active()
+ * @method static Builder<static>|EventResource downloadable()
+ * @method static \Database\Factories\EventResourceFactory factory($count = null, $state = [])
+ * @method static Builder<static>|EventResource newModelQuery()
+ * @method static Builder<static>|EventResource newQuery()
+ * @method static Builder<static>|EventResource ofType(string $type)
+ * @method static Builder<static>|EventResource public()
+ * @method static Builder<static>|EventResource query()
+ * @method static Builder<static>|EventResource whereCreatedAt($value)
+ * @method static Builder<static>|EventResource whereDescription($value)
+ * @method static Builder<static>|EventResource whereDownloadCount($value)
+ * @method static Builder<static>|EventResource whereEventId($value)
+ * @method static Builder<static>|EventResource whereFilePath($value)
+ * @method static Builder<static>|EventResource whereFileSize($value)
+ * @method static Builder<static>|EventResource whereFileType($value)
+ * @method static Builder<static>|EventResource whereFilename($value)
+ * @method static Builder<static>|EventResource whereId($value)
+ * @method static Builder<static>|EventResource whereIsDownloadable($value)
+ * @method static Builder<static>|EventResource whereIsPublic($value)
+ * @method static Builder<static>|EventResource whereMimeType($value)
+ * @method static Builder<static>|EventResource whereOriginalFilename($value)
+ * @method static Builder<static>|EventResource whereRequiresRegistration($value)
+ * @method static Builder<static>|EventResource whereResourceType($value)
+ * @method static Builder<static>|EventResource whereStatus($value)
+ * @method static Builder<static>|EventResource whereTitle($value)
+ * @method static Builder<static>|EventResource whereUpdatedAt($value)
+ * @method static Builder<static>|EventResource whereUploadedBy($value)
+ * @method static Builder<static>|EventResource whereUuid($value)
+ * @method static Builder<static>|EventResource whereViewCount($value)
+ * @mixin \Eloquent
  */
 class EventResource extends Model
 {

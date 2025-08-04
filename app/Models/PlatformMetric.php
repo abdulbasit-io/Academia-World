@@ -6,6 +6,38 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property string $metric_type
+ * @property string $metric_key
+ * @property array<array-key, mixed> $value
+ * @property \Illuminate\Support\Carbon $metric_date
+ * @property string $period
+ * @property array<array-key, mixed>|null $breakdown
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric dateRange($startDate, $endDate)
+ * @method static \Database\Factories\PlatformMetricFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric key($metricKey)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric latest($days = 30)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric ofType($metricType)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric period($period)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereBreakdown($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereMetricDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereMetricKey($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereMetricType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric wherePeriod($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PlatformMetric whereValue($value)
+ * @mixin \Eloquent
+ */
 class PlatformMetric extends Model
 {
     use HasFactory;

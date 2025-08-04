@@ -10,6 +10,56 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property int $forum_id
+ * @property int $user_id
+ * @property int|null $parent_id
+ * @property string $content
+ * @property int $is_pinned
+ * @property int $is_solution
+ * @property int $is_moderated
+ * @property int $likes_count
+ * @property-read int|null $replies_count
+ * @property \Illuminate\Support\Carbon|null $edited_at
+ * @property int|null $edited_by
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\DiscussionForum $forum
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $likedBy
+ * @property-read int|null $liked_by_count
+ * @property-read ForumPost|null $parent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, ForumPost> $replies
+ * @property-read \App\Models\User $user
+ * @method static \Database\Factories\ForumPostFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost replies()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost topLevel()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereContent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereEditedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereEditedBy($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereForumId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereIsModerated($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereIsPinned($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereIsSolution($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereLikesCount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereParentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereRepliesCount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ForumPost withoutTrashed()
+ * @mixin \Eloquent
+ */
 class ForumPost extends Model
 {
     use HasFactory, SoftDeletes;

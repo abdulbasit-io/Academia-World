@@ -7,6 +7,37 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property int $requester_id
+ * @property int $addressee_id
+ * @property string $status
+ * @property string|null $message
+ * @property \Illuminate\Support\Carbon|null $responded_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\User $addressee
+ * @property-read \App\Models\User $requester
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection accepted()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection blocked()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection declined()
+ * @method static \Database\Factories\UserConnectionFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection pending()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereAddresseeId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereMessage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereRequesterId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereRespondedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserConnection whereUuid($value)
+ * @mixin \Eloquent
+ */
 class UserConnection extends Model
 {
     use HasFactory;

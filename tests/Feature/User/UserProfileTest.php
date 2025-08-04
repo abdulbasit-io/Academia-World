@@ -159,7 +159,14 @@ class UserProfileTest extends TestCase
 
         $user->refresh();
         $this->assertNotNull($user->avatar);
-        $this->assertTrue(Storage::disk('public')->exists($user->avatar));
+        // Check that avatar is a complete URL (not just a path)
+        $this->assertStringStartsWith('http', $user->avatar);
+        
+        // For local storage, verify file exists by extracting path from URL
+        if (str_contains($user->avatar, '/storage/')) {
+            $path = str_replace(config('app.url') . '/storage/', '', $user->avatar);
+            $this->assertTrue(Storage::disk('public')->exists($path));
+        }
     }
 
     #[Test]

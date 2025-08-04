@@ -352,17 +352,24 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "name",
+                                    "first_name",
+                                    "last_name",
                                     "email",
                                     "password",
                                     "password_confirmation"
                                 ],
                                 "properties": {
-                                    "name": {
-                                        "description": "Full name of the admin",
+                                    "first_name": {
+                                        "description": "First name of the admin",
                                         "type": "string",
                                         "maxLength": 255,
-                                        "example": "John Doe"
+                                        "example": "John"
+                                    },
+                                    "last_name": {
+                                        "description": "Last name of the admin",
+                                        "type": "string",
+                                        "maxLength": 255,
+                                        "example": "Doe"
                                     },
                                     "email": {
                                         "description": "Email address (must be unique)",
@@ -404,7 +411,10 @@
                                                 "id": {
                                                     "type": "integer"
                                                 },
-                                                "name": {
+                                                "first_name": {
+                                                    "type": "string"
+                                                },
+                                                "last_name": {
                                                     "type": "string"
                                                 },
                                                 "email": {
@@ -550,7 +560,7 @@
             }
         },
         "/api/v1/admin/users/{user}/unban": {
-            "post": {
+            "put": {
                 "tags": [
                     "Admin"
                 ],
@@ -796,12 +806,13 @@
                 "operationId": "getAdminLogs",
                 "parameters": [
                     {
-                        "name": "admin_id",
+                        "name": "admin_uuid",
                         "in": "query",
-                        "description": "Filter by specific admin ID",
+                        "description": "Filter by specific admin UUID",
                         "required": false,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "format": "uuid"
                         }
                     },
                     {
@@ -838,12 +849,12 @@
                         }
                     },
                     {
-                        "name": "target_id",
+                        "name": "target_uuid",
                         "in": "query",
                         "description": "Filter by target ID (use with target_type)",
                         "required": false,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     },
                     {
@@ -911,8 +922,8 @@
                                                     "target_type": {
                                                         "type": "string"
                                                     },
-                                                    "target_id": {
-                                                        "type": "integer"
+                                                    "target_uuid": {
+                                                        "type": "string"
                                                     },
                                                     "description": {
                                                         "type": "string"
@@ -1638,7 +1649,7 @@
                 }
             }
         },
-        "/api/v1/admin/forum-posts": {
+        "/api/v1/admin/posts": {
             "get": {
                 "tags": [
                     "Admin"
@@ -1725,7 +1736,7 @@
                 }
             }
         },
-        "/api/v1/admin/forum-posts/{post}": {
+        "/api/v1/admin/posts/{post}": {
             "delete": {
                 "tags": [
                     "Admin"
@@ -4071,6 +4082,129 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/events/{event}/poster": {
+            "post": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Upload event poster",
+                "description": "Upload a poster for an event (host only)",
+                "operationId": "5c7db63cd1ad1b4174a47f757245f5aa",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "poster": {
+                                        "description": "Poster image file",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Poster uploaded successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "poster_url": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not authorized"
+                    },
+                    "422": {
+                        "description": "Validation errors"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Delete event poster",
+                "description": "Remove the poster from an event (host only)",
+                "operationId": "b2e4537b81a57277fc960a5fc149879a",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event UUID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Poster deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not authorized"
+                    },
+                    "404": {
+                        "description": "No poster found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/api/v1/events/{event}/forums": {

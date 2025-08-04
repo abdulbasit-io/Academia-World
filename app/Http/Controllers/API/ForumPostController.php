@@ -78,7 +78,7 @@ class ForumPostController extends Controller
     public function index(DiscussionForum $forum): JsonResponse
     {
         $posts = $forum->topLevelPosts()
-            ->with(['user:id,uuid,name', 'replies.user:id,uuid,name'])
+            ->with(['user:id,uuid,first_name,last_name', 'replies.user:id,uuid,first_name,last_name'])
             ->withCount('replies')
             ->paginate(20);
 
@@ -95,7 +95,7 @@ class ForumPostController extends Controller
                     'updated_at' => $post->updated_at,
                     'user' => $post->user ? [
                         'uuid' => $post->user->uuid,
-                        'name' => $post->user->name,
+                        'name' => $post->user->first_name . ' ' . $post->user->last_name,
                     ] : null,
                     'replies' => $post->replies->map(function($reply) {
                         return [
@@ -104,7 +104,7 @@ class ForumPostController extends Controller
                             'created_at' => $reply->created_at,
                             'user' => $reply->user ? [
                                 'uuid' => $reply->user->uuid,
-                                'name' => $reply->user->name,
+                                'name' => $reply->user->first_name . ' ' . $reply->user->last_name,
                             ] : null,
                         ];
                     }),
@@ -213,7 +213,7 @@ class ForumPostController extends Controller
             'content' => $validated['content'],
         ]);
 
-        $post->load(['user:id,uuid,name']);
+        $post->load(['user:id,uuid,first_name,last_name']);
 
         // Track analytics
         $this->analyticsService->trackEngagement('post_creation', [
@@ -222,7 +222,6 @@ class ForumPostController extends Controller
             'metadata' => [
                 'forum_id' => $forum->id,
                 'parent_id' => $validated['parent_id'] ?? null,
-                'is_reply' => !is_null($validated['parent_id'] ?? null),
             ]
         ]);
 
@@ -237,7 +236,7 @@ class ForumPostController extends Controller
                 'replies_count' => $post->replies_count,
                 'user' => [
                     'uuid' => $post->user->uuid,
-                    'name' => $post->user->name
+                    'name' => $post->user->first_name . ' ' . $post->user->last_name
                 ],
                 'created_at' => $post->created_at,
             ]
@@ -311,8 +310,8 @@ class ForumPostController extends Controller
     public function show(ForumPost $post): JsonResponse
     {
         $post->load([
-            'user:id,uuid,name',
-            'replies.user:id,uuid,name',
+            'user:id,uuid,first_name,last_name',
+            'replies.user:id,uuid,first_name,last_name',
             'forum:id,title,type'
         ]);
 
@@ -327,7 +326,7 @@ class ForumPostController extends Controller
                 'replies_count' => $post->replies_count,
                 'user' => [
                     'uuid' => $post->user->uuid,
-                    'name' => $post->user->name
+                    'name' => $post->user->first_name . ' ' . $post->user->last_name
                 ],
                 'replies' => $post->replies->map(function ($reply) {
                     return [
@@ -337,7 +336,7 @@ class ForumPostController extends Controller
                         'likes_count' => $reply->likes_count,
                         'user' => [
                             'uuid' => $reply->user->uuid,
-                            'name' => $reply->user->name
+                            'name' => $reply->user->first_name . ' ' . $reply->user->last_name
                         ],
                         'created_at' => $reply->created_at,
                     ];
@@ -483,11 +482,33 @@ class ForumPostController extends Controller
             ], 403);
         }
 
-        $post->delete();
+        try {
+            // Soft delete the post
+            $post->delete();
 
-        return response()->json([
-            'message' => 'Post deleted successfully'
-        ]);
+            \Log::info('Forum post soft deleted', [
+                'post_id' => $post->id,
+                'post_uuid' => $post->uuid,
+                'user_id' => $request->user()->id,
+                'forum_id' => $post->forum_id
+            ]);
+
+            return response()->json([
+                'message' => 'Post deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Forum post deletion failed', [
+                'post_id' => $post->id,
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to delete post',
+                'error' => 'Something went wrong. Please try again.'
+            ], 500);
+        }
     }
 
     /**

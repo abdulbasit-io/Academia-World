@@ -5,6 +5,8 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventResource;
+use App\Services\FileStorageService;
+use App\Traits\HandlesBase64Uploads;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\Response;
  */
 class ResourceController extends Controller
 {
+    use HandlesBase64Uploads;
     /**
      * @OA\Get(
      *     path="/api/v1/events/{event}/resources",
@@ -118,6 +121,7 @@ class ResourceController extends Controller
                         'file_type' => $resource->file_type,
                         'file_size' => $resource->file_size,
                         'file_size_formatted' => $resource->getFileSizeFormatted(),
+                        'file_url' => $resource->file_path, // Public URL to the resource file
                         'resource_type' => $resource->resource_type,
                         'is_public' => $resource->is_public,
                         'is_downloadable' => $resource->is_downloadable,
@@ -222,7 +226,37 @@ class ResourceController extends Controller
         }
         
         try {
-            $file = $request->file('file');
+            // Handle both multipart/form-data and JSON with base64
+            $file = null;
+            
+            if ($request->hasFile('file')) {
+                // Traditional file upload
+                $file = $request->file('file');
+            } elseif ($request->has('file') && is_string($request->input('file'))) {
+                // Base64 upload
+                $base64Data = $request->input('file');
+                if ($this->isValidBase64($base64Data)) {
+                    try {
+                        $file = $this->createUploadedFileFromBase64($base64Data, 'resource.pdf');
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to process base64 resource', [
+                            'user_id' => Auth::id(),
+                            'event_id' => $event->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+
+            if (!$file) {
+                return response()->json([
+                    'message' => 'Validation errors',
+                    'errors' => [
+                        'file' => ['The file field is required and must be a valid file or base64 encoded file.']
+                    ]
+                ], 422);
+            }
+            
             $originalFilename = $file->getClientOriginalName();
             $fileExtension = $file->getClientOriginalExtension();
             $mimeType = $file->getMimeType();
@@ -261,7 +295,9 @@ class ResourceController extends Controller
             }
             
             // Store file
-            $filePath = $file->storeAs('event-resources', $filename, 'public');
+            $fileStorageService = new FileStorageService();
+            $path = 'event-resources/' . $filename;
+            $fileUrl = $fileStorageService->store($file, $path);
             
             // Create resource record
             $resource = EventResource::create([
@@ -271,7 +307,7 @@ class ResourceController extends Controller
                 'description' => $request->get('description'),
                 'filename' => $filename,
                 'original_filename' => $originalFilename,
-                'file_path' => $filePath,
+                'file_path' => $fileUrl, // Store the complete URL instead of path
                 'file_type' => $fileExtension,
                 'mime_type' => $mimeType,
                 'file_size' => $fileSize,
@@ -299,6 +335,7 @@ class ResourceController extends Controller
                     'file_type' => $resource->file_type,
                     'file_size' => $resource->file_size,
                     'file_size_formatted' => $resource->getFileSizeFormatted(),
+                    'file_url' => $resource->file_path, // Public URL to the resource file
                     'resource_type' => $resource->resource_type,
                     'is_public' => $resource->is_public,
                     'is_downloadable' => $resource->is_downloadable,
@@ -375,6 +412,7 @@ class ResourceController extends Controller
                     'file_type' => $resource->file_type,
                     'file_size' => $resource->file_size,
                     'file_size_formatted' => $resource->getFileSizeFormatted(),
+                    'file_url' => $resource->file_path, // Public URL to the resource file
                     'resource_type' => $resource->resource_type,
                     'is_public' => $resource->is_public,
                     'is_downloadable' => $resource->is_downloadable,
@@ -488,6 +526,7 @@ class ResourceController extends Controller
                     'uuid' => $resource->uuid,
                     'title' => $resource->title,
                     'description' => $resource->description,
+                    'file_url' => $resource->file_path, // Public URL to the resource file
                     'resource_type' => $resource->resource_type,
                     'is_public' => $resource->is_public,
                     'is_downloadable' => $resource->is_downloadable,
@@ -547,9 +586,11 @@ class ResourceController extends Controller
         }
         
         try {
+            $fileStorageService = new FileStorageService();
+            
             // Delete file from storage
-            if ($resource->file_path && Storage::disk('public')->exists($resource->file_path)) {
-                Storage::disk('public')->delete($resource->file_path);
+            if ($resource->file_path) {
+                $fileStorageService->delete($resource->file_path);
             }
             
             // Soft delete the resource
@@ -624,10 +665,10 @@ class ResourceController extends Controller
                 ], 403);
             }
             
-            // Check if file exists
-            if (!$resource->file_path || !Storage::disk('public')->exists($resource->file_path)) {
+            // Check if file_url exists
+            if (!$resource->file_path) {
                 return response()->json([
-                    'message' => 'File not found'
+                    'message' => 'File URL not found'
                 ], 404);
             }
             
@@ -638,15 +679,28 @@ class ResourceController extends Controller
                 'resource_id' => $resource->id,
                 'event_id' => $resource->event_id,
                 'user_id' => $user?->id,
-                'filename' => $resource->original_filename
+                'filename' => $resource->original_filename,
+                'file_path' => $resource->file_path
             ]);
             
-            // Get the actual file path from the storage disk
-            $filePath = Storage::disk('public')->path($resource->file_path);
-            
-            return response()->download($filePath, $resource->original_filename, [
-                'Content-Type' => $resource->mime_type,
-            ]);
+            // Handle both URL and path formats (for backward compatibility and testing)
+            if (str_starts_with($resource->file_path, 'http')) {
+                // Full URL - redirect to the file URL
+                return redirect($resource->file_path);
+            } else {
+                // Relative path (legacy format or test) - serve from local storage
+                $filePath = Storage::disk('public')->path($resource->file_path);
+                
+                if (!Storage::disk('public')->exists($resource->file_path)) {
+                    return response()->json([
+                        'message' => 'File not found'
+                    ], 404);
+                }
+                
+                return response()->download($filePath, $resource->original_filename, [
+                    'Content-Type' => $resource->mime_type ?? 'application/octet-stream',
+                ]);
+            }
             
         } catch (\Exception $e) {
             Log::error('Resource download failed', [
@@ -660,5 +714,18 @@ class ResourceController extends Controller
                 'error' => 'Something went wrong. Please try again.'
             ], 500);
         }
+    }
+
+    /**
+     * Check if the given string is valid base64 data
+     */
+    private function isValidBase64(string $data): bool
+    {
+        // Check for data URI scheme
+        if (preg_match('/^data:([^;]+);base64,/', $data)) {
+            $data = substr($data, strpos($data, ',') + 1);
+        }
+        // Check if valid base64
+        return base64_decode($data, true) !== false;
     }
 }
