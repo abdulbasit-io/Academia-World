@@ -481,6 +481,16 @@ php artisan queue:work
 php artisan l5-swagger:generate
 ```
 
+### Debugging and Monitoring
+
+#### Laravel Telescope
+This project uses Laravel Telescope for debugging and insight into requests, exceptions, database queries, and more during local development.
+
+You can access the Telescope dashboard at:
+`http://localhost:8000/telescope`
+
+**Note:** Telescope is only enabled in the local development environment for security reasons.
+
 ### IDE Support & Static Analysis
 
 Academia World includes comprehensive IDE support to minimize false positives and improve developer experience:
@@ -547,13 +557,6 @@ php artisan test
 - Participate in discussions
 - Access shared resources
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ### Development Guidelines
 - Follow PSR-12 coding standards
@@ -566,5 +569,3 @@ php artisan test
 ### Documentation
 - [API Documentation](https://your-domain.com/api/documentation)
 - [Admin Guide](docs/ADMIN_GUIDE.md)
-
-

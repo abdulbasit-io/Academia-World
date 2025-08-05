@@ -266,45 +266,7 @@ class AuthController extends Controller
             ]
         ]);
 
-        // Create token with expiration (4 months)
-        $token = $user->createToken(
-            'academia-world-token',
-            ['*'],
-            now()->addMonths(4)
-        )->plainTextToken;
-
-        // Create response with cookie
-        $response = response()->json([
-            'message' => 'Login successful',
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'expires_in' => 60 * 24 * 120, // 4 months in minutes
-            'user' => [
-                'uuid' => $user->uuid,
-                'name' => $user->full_name,
-                'email' => $user->email,
-                'institution' => $user->institution,
-                'department' => $user->department,
-                'position' => $user->position,
-                'account_status' => $user->account_status,
-                'is_admin' => $user->isAdmin()
-            ]
-        ]);
-
-        // Set HTTP-only cookie with the token
-        $response->withCookie(cookie(
-            'academia_world_token',
-            $token,
-            60 * 24 * 120, // 4 months in minutes
-            '/',
-            null,
-            true, // secure (HTTPS only in production)
-            true, // httpOnly
-            false, // raw
-            'Lax' // sameSite
-        ));
-
-        return $response;
+        return $this->createAuthenticationResponse($user, 'Login successful');
     }
 
     /**
@@ -476,45 +438,7 @@ class AuthController extends Controller
         $currentTokenId = $request->user()->currentAccessToken()->id;
         $user->tokens()->where('id', $currentTokenId)->delete();
 
-        // Create new token with fresh expiration (4 months)
-        $newToken = $user->createToken(
-            'academia-world-token',
-            ['*'],
-            now()->addMonths(4)
-        );
-
-        // Create response with new token
-        $response = response()->json([
-            'message' => 'Token refreshed successfully',
-            'access_token' => $newToken->plainTextToken,
-            'token_type' => 'Bearer',
-            'expires_in' => 60 * 24 * 120, // 4 months in minutes
-            'user' => [
-                'uuid' => $user->uuid,
-                'name' => $user->full_name,
-                'email' => $user->email,
-                'institution' => $user->institution,
-                'department' => $user->department,
-                'position' => $user->position,
-                'account_status' => $user->account_status,
-                'is_admin' => $user->isAdmin()
-            ]
-        ]);
-
-        // Update the authentication cookie with new token
-        $response->withCookie(cookie(
-            'academia_world_token',
-            $newToken->plainTextToken,
-            60 * 24 * 120, // 4 months in minutes
-            '/',
-            null,
-            true, // secure (HTTPS only in production)
-            true, // httpOnly
-            false, // raw
-            'Lax' // sameSite
-        ));
-
-        return $response;
+        return $this->createAuthenticationResponse($user, 'Token refreshed successfully');
     }
 
     /**
@@ -750,8 +674,8 @@ class AuthController extends Controller
      * @OA\Post(
      *     path="/api/v1/auth/verify-email",
      *     tags={"Authentication"},
-     *     summary="Verify user email address",
-     *     description="Verify user email address using verification token",
+     *     summary="Verify user email address and auto-login",
+     *     description="Verify user email address using verification token and automatically log them in",
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -761,9 +685,25 @@ class AuthController extends Controller
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Email verified successfully",
+     *         description="Email verified successfully and user logged in",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Email verified successfully")
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Email verified successfully. You are now logged in."),
+     *             @OA\Property(property="access_token", type="string", example="1|abc123def456..."),
+     *             @OA\Property(property="token_type", type="string", example="Bearer"),
+     *             @OA\Property(property="expires_in", type="integer", example=172800),
+     *             @OA\Property(
+     *                 property="user",
+     *                 type="object",
+     *                 @OA\Property(property="uuid", type="string", format="uuid"),
+     *                 @OA\Property(property="name", type="string"),
+     *                 @OA\Property(property="email", type="string"),
+     *                 @OA\Property(property="institution", type="string"),
+     *                 @OA\Property(property="department", type="string"),
+     *                 @OA\Property(property="position", type="string"),
+     *                 @OA\Property(property="account_status", type="string"),
+     *                 @OA\Property(property="is_admin", type="boolean")
+     *             )
      *         )
      *     ),
      *     @OA\Response(response=400, description="Invalid or expired token"),
@@ -814,10 +754,60 @@ class AuthController extends Controller
       $user->markEmailAsVerified();
       $verificationToken->delete();
 
-      return response()->json([
-        'success' => true,
-        'message' => 'Email verified successfully'
+      // Update last login timestamp
+      $user->update(['last_login_at' => now()]);
+
+      // Track email verification and auto-login analytics
+      $this->analyticsService->trackEngagement('email_verification', [
+          'entity_type' => 'user',
+          'entity_id' => $user->id,
+          'metadata' => [
+              'institution' => $user->institution,
+              'department' => $user->department,
+              'auto_login' => true,
+          ]
       ]);
+
+      // Create authentication token (4 months expiration)
+      $token = $user->createToken(
+          'academia-world-token',
+          ['*'],
+          now()->addMonths(4)
+      )->plainTextToken;
+
+      // Create response with user data and token
+      $response = response()->json([
+        'success' => true,
+        'message' => 'Email verified successfully. You are now logged in.',
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+        'expires_in' => 60 * 24 * 120, // 4 months in minutes
+        'user' => [
+            'uuid' => $user->uuid,
+            'name' => $user->full_name,
+            'email' => $user->email,
+            'institution' => $user->institution,
+            'department' => $user->department,
+            'position' => $user->position,
+            'account_status' => $user->account_status,
+            'is_admin' => $user->isAdmin()
+        ]
+      ]);
+
+      // Set HTTP-only cookie with the token
+      $response->withCookie(cookie(
+          'academia_world_token',
+          $token,
+          60 * 24 * 120, // 4 months in minutes
+          '/',
+          null,
+          true, // secure (HTTPS only in production)
+          true, // httpOnly
+          false, // raw
+          'Lax' // sameSite
+      ));
+
+      return $response;
     }
 
     /**
@@ -887,6 +877,59 @@ class AuthController extends Controller
                 'message' => 'Failed to send verification email'
             ], 500);
         }
+    }
+
+    /**
+     * Create authentication token and set HTTP-only cookie
+     */
+    private function createAuthenticationResponse(User $user, string $message = 'Authentication successful'): JsonResponse
+    {
+        // Create token with expiration (4 months)
+        $token = $user->createToken(
+            'academia-world-token',
+            ['*'],
+            now()->addMonths(4)
+        )->plainTextToken;
+
+        // Create response with user data and token
+        $response = response()->json([
+            'success' => true,
+            'message' => $message,
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => 60 * 24 * 120, // 4 months in minutes
+            'user' => [
+                'uuid' => $user->uuid,
+                'name' => $user->full_name,
+                'email' => $user->email,
+                'institution' => $user->institution,
+                'department' => $user->department,
+                'position' => $user->position,
+                'account_status' => $user->account_status,
+                'is_admin' => $user->isAdmin()
+            ]
+        ]);
+
+        // Set HTTP-only cookie with the token
+        return $this->setAuthenticationCookie($response, $token);
+    }
+
+    /**
+     * Set HTTP-only authentication cookie on response
+     */
+    private function setAuthenticationCookie(JsonResponse $response, string $token): JsonResponse
+    {
+        return $response->withCookie(cookie(
+            'academia_world_token',
+            $token,
+            60 * 24 * 120, // 4 months in minutes
+            '/',
+            null,
+            true, // secure (HTTPS only in production)
+            true, // httpOnly
+            false, // raw
+            'Lax' // sameSite
+        ));
     }
 
     /**

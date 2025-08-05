@@ -356,7 +356,7 @@ class ForumController extends Controller
      * @OA\Delete(
      *     path="/api/v1/forums/{forum}",
      *     summary="Delete a forum",
-     *     description="Deletes a forum and all its posts. Only event hosts and admins can delete forums.",
+     *     description="Soft deletes a forum (preserves data for audit purposes). Only event hosts and admins can delete forums.",
      *     operationId="deleteForum",
      *     tags={"Forums"},
      *     @OA\Parameter(
@@ -399,10 +399,19 @@ class ForumController extends Controller
             ], 403);
         }
 
-        $forum->delete();
+        try {
+            // Soft delete the forum (preserves data for audit purposes)
+            $forum->delete();
 
-        return response()->json([
-            'message' => 'Forum deleted successfully'
-        ]);
+            return response()->json([
+                'message' => 'Forum deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete forum',
+                'error' => 'Something went wrong. Please try again.'
+            ], 500);
+        }
     }
 }

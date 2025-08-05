@@ -2931,8 +2931,8 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Verify user email address",
-                "description": "Verify user email address using verification token",
+                "summary": "Verify user email address and auto-login",
+                "description": "Verify user email address using verification token and automatically log them in",
                 "operationId": "28f3343632266b214822f6a2f3f9e826",
                 "requestBody": {
                     "required": true,
@@ -2955,14 +2955,60 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Email verified successfully",
+                        "description": "Email verified successfully and user logged in",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Email verified successfully"
+                                            "example": "Email verified successfully. You are now logged in."
+                                        },
+                                        "access_token": {
+                                            "type": "string",
+                                            "example": "1|abc123def456..."
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "Bearer"
+                                        },
+                                        "expires_in": {
+                                            "type": "integer",
+                                            "example": 172800
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "name": {
+                                                    "type": "string"
+                                                },
+                                                "email": {
+                                                    "type": "string"
+                                                },
+                                                "institution": {
+                                                    "type": "string"
+                                                },
+                                                "department": {
+                                                    "type": "string"
+                                                },
+                                                "position": {
+                                                    "type": "string"
+                                                },
+                                                "account_status": {
+                                                    "type": "string"
+                                                },
+                                                "is_admin": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -3777,6 +3823,96 @@
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/components/schemas/EventRegistration"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/my-cancelled-registrations": {
+            "get": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Get user's cancelled event registrations",
+                "description": "Retrieve all events the authenticated user has cancelled registration for",
+                "operationId": "d4fa099db92f2f667a178afa580be903",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number for pagination",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User cancelled registrations retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "event": {
+                                                        "$ref": "#/components/schemas/Event"
+                                                    },
+                                                    "registration_details": {
+                                                        "properties": {
+                                                            "status": {
+                                                                "type": "string",
+                                                                "example": "cancelled"
+                                                            },
+                                                            "registered_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            },
+                                                            "cancelled_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            },
+                                                            "notes": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "type": "object"
                                             }
                                         },
                                         "pagination": {

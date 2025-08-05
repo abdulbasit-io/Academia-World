@@ -38,6 +38,13 @@ return new class extends Migration
                 $table->timestamp('deleted_at')->nullable()->after('updated_at');
             }
         });
+
+        // Update discussion_forums table to add deleted_at for soft deletes
+        Schema::table('discussion_forums', function (Blueprint $table) {
+            if (!Schema::hasColumn('discussion_forums', 'deleted_at')) {
+                $table->timestamp('deleted_at')->nullable()->after('updated_at');
+            }
+        });
     }
 
     /**
@@ -60,6 +67,12 @@ return new class extends Migration
 
         Schema::table('forum_posts', function (Blueprint $table) {
             if (Schema::hasColumn('forum_posts', 'deleted_at')) {
+                $table->dropColumn('deleted_at');
+            }
+        });
+
+        Schema::table('discussion_forums', function (Blueprint $table) {
+            if (Schema::hasColumn('discussion_forums', 'deleted_at')) {
                 $table->dropColumn('deleted_at');
             }
         });

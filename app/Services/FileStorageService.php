@@ -241,6 +241,12 @@ class FileStorageService
     public function delete(string $urlOrPath): bool
     {
         try {
+            // Handle empty or null URLs
+            if (empty($urlOrPath)) {
+                Log::info('Skipping deletion of empty URL');
+                return true;
+            }
+
             // Handle legacy path formats (for backward compatibility)
             if (!str_contains($urlOrPath, 'http') && !str_contains($urlOrPath, '/storage/')) {
                 // This looks like a legacy path (e.g., "avatars/old-avatar.jpg")
@@ -249,6 +255,12 @@ class FileStorageService
             
             $provider = $this->detectProviderFromUrl($urlOrPath);
             $path = $this->extractPathFromUrl($urlOrPath, $provider);
+
+            Log::info('Attempting file deletion', [
+                'url' => $urlOrPath,
+                'provider' => $provider,
+                'path' => $path
+            ]);
 
             switch ($provider) {
                 case 's3':
@@ -265,7 +277,8 @@ class FileStorageService
         } catch (\Exception $e) {
             Log::error('File deletion failed', [
                 'url' => $urlOrPath,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return false;
@@ -394,6 +407,7 @@ class FileStorageService
     {
         try {
             if (!class_exists('\Cloudinary\Cloudinary')) {
+                Log::warning('Cloudinary class not available for deletion', ['url' => $url]);
                 return false;
             }
 
@@ -408,13 +422,39 @@ class FileStorageService
             // Extract public_id from Cloudinary URL
             $publicId = $this->extractCloudinaryPublicId($url);
             
+            // First check if the file exists
+            try {
+                $cloudinary->adminApi()->asset($publicId);
+                Log::info('Cloudinary file found, proceeding with deletion', ['public_id' => $publicId]);
+            } catch (\Exception $e) {
+                Log::warning('Cloudinary file not found, marking as already deleted', [
+                    'public_id' => $publicId,
+                    'url' => $url,
+                    'error' => $e->getMessage()
+                ]);
+                // Return true since the file is already "deleted" (doesn't exist)
+                return true;
+            }
+            
+            // Proceed with deletion
             $result = $cloudinary->uploadApi()->destroy($publicId);
             
-            Log::info('File deleted from Cloudinary', ['public_id' => $publicId, 'result' => $result]);
-            return $result['result'] === 'ok';
+            $success = isset($result['result']) && in_array($result['result'], ['ok', 'not found']);
+            
+            Log::info('Cloudinary deletion attempt completed', [
+                'public_id' => $publicId,
+                'result' => $result,
+                'success' => $success
+            ]);
+            
+            return $success;
             
         } catch (\Exception $e) {
-            Log::error('Cloudinary deletion failed', ['url' => $url, 'error' => $e->getMessage()]);
+            Log::error('Cloudinary deletion failed', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return false;
         }
     }
@@ -456,10 +496,22 @@ class FileStorageService
      */
     protected function extractCloudinaryPublicId(string $url): string
     {
-        // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}.{format}
-        $pattern = '/\/upload\/(?:[^\/]+\/)*([^\/\.]+)(?:\.[^\.]+)?$/';
+        // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{version}/{folder}/{public_id}.{format}
+        // We need to extract everything after '/upload/' excluding version (v1234567890) and file extension
+        
+        // Remove the base URL part
+        $pattern = '/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^.]+)?$/';
         if (preg_match($pattern, $url, $matches)) {
-            return $matches[1];
+            // This will capture: "avatars/avatar_10_1754402470" from the URL
+            $publicId = $matches[1];
+            
+            Log::info('Cloudinary public ID extracted', [
+                'url' => $url,
+                'public_id' => $publicId,
+                'pattern_used' => $pattern
+            ]);
+            
+            return $publicId;
         }
         
         throw new \Exception("Cannot extract public_id from Cloudinary URL: {$url}");

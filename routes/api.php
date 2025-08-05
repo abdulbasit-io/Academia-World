@@ -65,6 +65,7 @@ Route::prefix('v1')->middleware(['cookie.auth', 'auth:sanctum'])->group(function
     Route::get('events/{event}/attendees', [EventController::class, 'attendees']);
     Route::get('my-events', [EventController::class, 'myEvents']);
     Route::get('my-registrations', [EventController::class, 'myRegistrations']);
+    Route::get('my-cancelled-registrations', [EventController::class, 'myCancelledRegistrations']);
     
     // Event poster management routes
     Route::post('events/{event}/poster', [EventController::class, 'uploadPoster']);

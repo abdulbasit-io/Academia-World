@@ -898,6 +898,85 @@ class EventController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/v1/my-cancelled-registrations",
+     *     tags={"Events"},
+     *     summary="Get user's cancelled event registrations",
+     *     description="Retrieve all events the authenticated user has cancelled registration for",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Page number for pagination",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, default=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="User cancelled registrations retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(type="object",
+     *                     @OA\Property(property="event", ref="#/components/schemas/Event"),
+     *                     @OA\Property(property="registration_details", type="object",
+     *                         @OA\Property(property="status", type="string", example="cancelled"),
+     *                         @OA\Property(property="registered_at", type="string", format="date-time"),
+     *                         @OA\Property(property="cancelled_at", type="string", format="date-time"),
+     *                         @OA\Property(property="notes", type="string", nullable=true)
+     *                     )
+     *                 )
+     *             ),
+     *             @OA\Property(property="pagination", ref="#/components/schemas/PaginationMeta")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
+     * )
+     */
+    public function myCancelledRegistrations(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        
+        $events = $user->registeredEvents()
+            ->wherePivot('status', 'cancelled')
+            ->with(['host:id,uuid,first_name,last_name,institution'])
+            ->orderBy('event_registrations.cancelled_at', 'desc')
+            ->paginate(10);
+
+        return response()->json([
+            'message' => 'Your cancelled registrations retrieved successfully',
+            'data' => collect($events->items())->map(function($event) {
+                return [
+                    'event' => $this->transformEventData($event),
+                    'registration_details' => [
+                        'status' => $event->pivot->status,
+                        'registered_at' => $event->pivot->registered_at,
+                        'cancelled_at' => $event->pivot->cancelled_at,
+                        'notes' => $event->pivot->notes
+                    ]
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $events->currentPage(),
+                'last_page' => $events->lastPage(),
+                'per_page' => $events->perPage(),
+                'total' => $events->total(),
+            ]
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/v1/events/{event}/attendees",
      *     tags={"Events"},
      *     summary="Get event attendees",
