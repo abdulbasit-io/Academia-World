@@ -17,13 +17,6 @@ Academia World is a platform that empowers academic institutions, researchers, a
 - **Discussion Forums**: Engage in academic discourse through structured discussion forums
 - **User Management**: Comprehensive user profiles with institutional affiliations and academic credentials
 
-## 📸 Screenshots
-
-![Academia World Root Interface](storage/Screenshot%20from%202025-08-06%2011-51-19.png)
-*Main interface and dashboard view*
-
-![API Documentation Page](storage/Screenshot%20from%202025-08-06%2015-05-12.png)
-*Event creation and management features*
 
 ## 🏗️ Architecture
 
@@ -312,6 +305,7 @@ Academia World provides comprehensive API documentation through OpenAPI 3.0 spec
 - **Root URL**: `http://localhost:8000/`
 - **Swagger UI**: `http://localhost:8000/api/documentation` (interactive)
 - **API Reference**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (detailed guide)
+- **Admin Guide**: [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) (administration and management)
 - **Production**: `https://your-domain.com/api/documentation`
 
 > **Note**: The OpenAPI documentation is automatically generated from controller annotations. Run `php artisan l5-swagger:generate` to update after making changes.
