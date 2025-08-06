@@ -33,54 +33,192 @@ class EventController extends Controller
         // Constructor injection for AnalyticsService
     }
     /**
+     * Browse published academic events with advanced filtering
+     * 
      * @OA\Get(
      *     path="/api/v1/events",
      *     tags={"Events"},
-     *     summary="Browse published events",
-     *     description="Get a paginated list of published public events with filtering options",
+     *     summary="Browse published academic events with advanced filtering and search",
+     *     description="Retrieves a paginated list of published, public academic events with comprehensive filtering capabilities. This endpoint allows users to discover upcoming conferences, workshops, seminars, and other academic gatherings. Events are automatically filtered to show only future events that are publicly accessible.",
+     *     operationId="browseAcademicEvents",
      *     @OA\Parameter(
      *         name="search",
      *         in="query",
-     *         description="Search in title, description, and tags",
+     *         description="Search across event titles, descriptions, locations, and tags using fuzzy matching",
      *         required=false,
-     *         @OA\Schema(type="string")
+     *         @OA\Schema(
+     *             type="string",
+     *             maxLength=255,
+     *             example="machine learning conference"
+     *         )
      *     ),
      *     @OA\Parameter(
      *         name="location_type",
      *         in="query",
-     *         description="Filter by location type",
+     *         description="Filter events by their delivery format",
      *         required=false,
-     *         @OA\Schema(type="string", enum={"physical", "virtual", "hybrid"})
+     *         @OA\Schema(
+     *             type="string", 
+     *             enum={"physical", "virtual", "hybrid"},
+     *             example="hybrid"
+     *         )
      *     ),
      *     @OA\Parameter(
      *         name="date_from",
      *         in="query",
-     *         description="Filter events starting from this date",
+     *         description="Filter events starting from this date (inclusive). Events starting on this date or later will be included.",
      *         required=false,
-     *         @OA\Schema(type="string", format="date")
+     *         @OA\Schema(
+     *             type="string", 
+     *             format="date",
+     *             example="2025-08-15"
+     *         )
      *     ),
      *     @OA\Parameter(
      *         name="date_to",
      *         in="query",
-     *         description="Filter events ending before this date",
+     *         description="Filter events ending before this date (inclusive). Events starting on this date or earlier will be included.",
      *         required=false,
-     *         @OA\Schema(type="string", format="date")
+     *         @OA\Schema(
+     *             type="string", 
+     *             format="date",
+     *             example="2025-12-31"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="category",
+     *         in="query",
+     *         description="Filter events by academic category or discipline",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="string",
+     *             example="computer-science"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="host_institution",
+     *         in="query",
+     *         description="Filter events by hosting institution",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="string",
+     *             example="Stanford University"
+     *         )
      *     ),
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
-     *         description="Page number for pagination",
+     *         description="Page number for pagination (starts from 1)",
      *         required=false,
-     *         @OA\Schema(type="integer", minimum=1, default=1)
+     *         @OA\Schema(
+     *             type="integer", 
+     *             minimum=1, 
+     *             default=1,
+     *             example=1
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Number of events per page",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="integer", 
+     *             minimum=1, 
+     *             maximum=50,
+     *             default=15,
+     *             example=15
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_by",
+     *         in="query",
+     *         description="Sort events by field",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"start_date", "created_at", "title", "registration_count"},
+     *             default="start_date",
+     *             example="start_date"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_order",
+     *         in="query",
+     *         description="Sort order direction",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"asc", "desc"},
+     *             default="asc",
+     *             example="asc"
+     *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Events retrieved successfully",
+     *         description="Academic events retrieved successfully with pagination metadata",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Event")),
-     *             @OA\Property(property="pagination", ref="#/components/schemas/PaginationMeta")
+     *             @OA\Property(property="message", type="string", example="Events retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data", 
+     *                 type="array", 
+     *                 description="Array of academic events",
+     *                 @OA\Items(ref="#/components/schemas/Event")
+     *             ),
+     *             @OA\Property(
+     *                 property="pagination", 
+     *                 ref="#/components/schemas/PaginationMeta",
+     *                 description="Pagination information for navigating results"
+     *             ),
+     *             @OA\Property(
+     *                 property="filters_applied",
+     *                 type="object",
+     *                 description="Summary of active filters",
+     *                 @OA\Property(property="search_term", type="string", nullable=true, example="machine learning"),
+     *                 @OA\Property(property="location_type", type="string", nullable=true, example="hybrid"),
+     *                 @OA\Property(property="date_range", type="object", nullable=true,
+     *                     @OA\Property(property="from", type="string", example="2025-08-15"),
+     *                     @OA\Property(property="to", type="string", example="2025-12-31")
+     *                 ),
+     *                 @OA\Property(property="results_count", type="integer", example=42)
+     *             ),
+     *             @OA\Property(
+     *                 property="suggestions",
+     *                 type="object",
+     *                 description="Helpful suggestions for users",
+     *                 @OA\Property(
+     *                     property="popular_searches", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"artificial intelligence", "climate research", "digital humanities"}
+     *                 ),
+     *                 @OA\Property(
+     *                     property="upcoming_categories", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"Computer Science", "Environmental Studies", "Medical Research"}
+     *                 )
+     *             )
      *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid query parameters or filters",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid date format. Please use YYYY-MM-DD format."),
+     *             @OA\Property(property="error_code", type="string", example="INVALID_DATE_FORMAT"),
+     *             @OA\Property(
+     *                 property="invalid_parameters",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"date_from", "date_to"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error during event retrieval",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      *     )
      * )
      */
@@ -131,46 +269,240 @@ class EventController extends Controller
     }
 
     /**
+     * Create a new academic event for the platform
+     * 
      * @OA\Post(
      *     path="/api/v1/events",
      *     tags={"Events"},
-     *     summary="Create a new event",
-     *     description="Create a new event (automatically published for moderation)",
+     *     summary="Create a new academic event for the platform",
+     *     description="Creates a new academic event that will be automatically published and made available for registration. Academic users can create conferences, workshops, seminars, lectures, and other educational events. The event will be visible to all platform users based on its visibility settings and will support registration management.",
+     *     operationId="createAcademicEvent",
      *     security={{"sanctum":{}}},
      *     @OA\RequestBody(
      *         required=true,
+     *         description="Complete event details for creation",
      *         @OA\JsonContent(
-     *             required={"title", "description", "start_date", "end_date", "location_type"},
-     *             @OA\Property(property="title", type="string", maxLength=255, example="AI in Academic Research"),
-     *             @OA\Property(property="description", type="string", example="Workshop on implementing AI tools in academic research"),
-     *             @OA\Property(property="start_date", type="string", format="date-time", example="2025-08-15 14:00:00"),
-     *             @OA\Property(property="end_date", type="string", format="date-time", example="2025-08-15 17:00:00"),
-     *             @OA\Property(property="timezone", type="string", maxLength=50, example="UTC"),
-     *             @OA\Property(property="location_type", type="string", enum={"physical", "virtual", "hybrid"}, example="hybrid"),
-     *             @OA\Property(property="location", type="string", maxLength=500, example="University Main Hall"),
-     *             @OA\Property(property="virtual_link", type="string", format="url", example="https://zoom.us/j/123456789"),
-     *             @OA\Property(property="capacity", type="integer", minimum=1, example=50),
-     *             @OA\Property(property="visibility", type="string", enum={"public", "private"}, example="public"),
-     *             @OA\Property(property="tags", type="array", @OA\Items(type="string"), example={"AI", "Research", "Workshop"})
+     *             required={"title", "description", "start_date", "end_date", "location_type", "visibility"},
+     *             @OA\Property(
+     *                 property="title", 
+     *                 type="string", 
+     *                 maxLength=255,
+     *                 example="International Conference on Artificial Intelligence in Healthcare",
+     *                 description="Clear, descriptive title of the academic event"
+     *             ),
+     *             @OA\Property(
+     *                 property="description", 
+     *                 type="string",
+     *                 example="Join leading researchers and practitioners for a comprehensive exploration of AI applications in modern healthcare. This conference will cover machine learning in diagnostics, ethical considerations in AI-driven treatment, and future trends in medical AI research.",
+     *                 description="Detailed description of the event content, objectives, and target audience"
+     *             ),
+     *             @OA\Property(
+     *                 property="start_date", 
+     *                 type="string", 
+     *                 format="date-time",
+     *                 example="2025-10-15T09:00:00Z",
+     *                 description="Event start date and time in ISO 8601 format (UTC)"
+     *             ),
+     *             @OA\Property(
+     *                 property="end_date", 
+     *                 type="string", 
+     *                 format="date-time",
+     *                 example="2025-10-17T17:00:00Z",
+     *                 description="Event end date and time in ISO 8601 format (UTC). Must be after start_date."
+     *             ),
+     *             @OA\Property(
+     *                 property="timezone", 
+     *                 type="string", 
+     *                 maxLength=50,
+     *                 example="America/New_York",
+     *                 description="Event timezone (IANA timezone identifier). Defaults to UTC if not provided."
+     *             ),
+     *             @OA\Property(
+     *                 property="location_type", 
+     *                 type="string", 
+     *                 enum={"physical", "virtual", "hybrid"},
+     *                 example="hybrid",
+     *                 description="Format of event delivery: physical (in-person only), virtual (online only), or hybrid (both)"
+     *             ),
+     *             @OA\Property(
+     *                 property="location", 
+     *                 type="string", 
+     *                 maxLength=500,
+     *                 example="Stanford University Medical Center, Main Auditorium, 300 Pasteur Drive, Stanford, CA 94305",
+     *                 description="Physical venue address. Required for physical and hybrid events."
+     *             ),
+     *             @OA\Property(
+     *                 property="virtual_link", 
+     *                 type="string", 
+     *                 format="url",
+     *                 example="https://zoom.us/j/123456789",
+     *                 description="Online meeting link (Zoom, Teams, etc.). Required for virtual and hybrid events."
+     *             ),
+     *             @OA\Property(
+     *                 property="capacity", 
+     *                 type="integer", 
+     *                 minimum=1,
+     *                 maximum=10000,
+     *                 example=250,
+     *                 description="Maximum number of attendees. Leave null for unlimited capacity."
+     *             ),
+     *             @OA\Property(
+     *                 property="visibility", 
+     *                 type="string", 
+     *                 enum={"public", "private"},
+     *                 example="public",
+     *                 description="Event visibility: public (discoverable by all users) or private (invitation only)"
+     *             ),
+     *             @OA\Property(
+     *                 property="requirements", 
+     *                 type="string", 
+     *                 maxLength=1000,
+     *                 example="Basic knowledge of machine learning concepts recommended. Laptop required for hands-on sessions.",
+     *                 description="Prerequisites or requirements for attendees"
+     *             ),
+     *             @OA\Property(
+     *                 property="tags", 
+     *                 type="array", 
+     *                 @OA\Items(type="string", maxLength=50),
+     *                 example={"AI", "Healthcare", "Machine Learning", "Medical Research", "Conference"},
+     *                 description="Relevant tags for categorization and searchability"
+     *             ),
+     *             @OA\Property(
+     *                 property="poster", 
+     *                 type="string", 
+     *                 format="binary",
+     *                 description="Event poster image (JPEG, PNG, GIF). Maximum 2MB. Optional but recommended for better visibility."
+     *             ),
+     *             @OA\Property(
+     *                 property="registration_deadline", 
+     *                 type="string", 
+     *                 format="date-time",
+     *                 example="2025-10-10T23:59:59Z",
+     *                 description="Deadline for event registration. Defaults to event start date if not provided."
+     *             ),
+     *             @OA\Property(
+     *                 property="contact_email", 
+     *                 type="string", 
+     *                 format="email",
+     *                 example="conference@stanford.edu",
+     *                 description="Contact email for event inquiries. Defaults to organizer's email."
+     *             ),
+     *             @OA\Property(
+     *                 property="website_url", 
+     *                 type="string", 
+     *                 format="url",
+     *                 example="https://ai-healthcare-conference.stanford.edu",
+     *                 description="Official event website for additional information"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=201,
-     *         description="Event created successfully",
+     *         description="Academic event created and published successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Event created and published successfully"),
-     *             @OA\Property(property="data", ref="#/components/schemas/Event")
+     *             @OA\Property(property="message", type="string", example="Event created and published successfully. Your event is now live and accepting registrations!"),
+     *             @OA\Property(property="data", ref="#/components/schemas/Event", description="Complete created event details"),
+     *             @OA\Property(
+     *                 property="event_status",
+     *                 type="object",
+     *                 description="Event publication and registration status",
+     *                 @OA\Property(property="is_published", type="boolean", example=true),
+     *                 @OA\Property(property="registration_open", type="boolean", example=true),
+     *                 @OA\Property(property="event_url", type="string", example="https://academiaworld.com/events/550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="admin_notified", type="boolean", example=true, description="Whether platform administrators were notified")
+     *             ),
+     *             @OA\Property(
+     *                 property="next_steps",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Share your event link with potential attendees", "Monitor registrations through your dashboard", "Prepare event materials and presentations", "Set up reminder notifications for registered attendees"},
+     *                 description="Suggested actions for event organizers"
+     *             ),
+     *             @OA\Property(
+     *                 property="organizer_tools",
+     *                 type="object",
+     *                 description="Available tools for event management",
+     *                 @OA\Property(property="edit_event", type="string", example="/api/v1/events/{uuid}"),
+     *                 @OA\Property(property="view_registrations", type="string", example="/api/v1/events/{uuid}/registrations"),
+     *                 @OA\Property(property="send_updates", type="string", example="/api/v1/events/{uuid}/announcements")
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=422,
-     *         description="Validation errors",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *         description="Validation errors in event data",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors", 
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="title", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"The title field is required.", "The title may not be greater than 255 characters."}
+     *                 ),
+     *                 @OA\Property(
+     *                     property="start_date", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"The start date must be a date after now."}
+     *                 ),
+     *                 @OA\Property(
+     *                     property="location", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"The location field is required when location type is physical or hybrid."}
+     *                 ),
+     *                 @OA\Property(
+     *                     property="virtual_link", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"The virtual link must be a valid URL."}
+     *                 )
+     *             )
+     *         )
      *     ),
      *     @OA\Response(
      *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *         description="User not authenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="You must be logged in to create events."),
+     *             @OA\Property(property="error_code", type="string", example="AUTHENTICATION_REQUIRED"),
+     *             @OA\Property(property="login_url", type="string", example="/api/v1/auth/login")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="User lacks permission to create events",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Your account does not have permission to create events. Please verify your email or contact support."),
+     *             @OA\Property(property="error_code", type="string", example="INSUFFICIENT_PERMISSIONS"),
+     *             @OA\Property(
+     *                 property="required_permissions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"verified_email", "active_account"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=413,
+     *         description="Uploaded poster file is too large",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The poster file is too large. Maximum size is 2MB."),
+     *             @OA\Property(property="error_code", type="string", example="FILE_TOO_LARGE"),
+     *             @OA\Property(property="max_size", type="string", example="2MB")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error during event creation",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="An error occurred while creating the event. Please try again."),
+     *             @OA\Property(property="error_code", type="string", example="EVENT_CREATION_FAILED"),
+     *             @OA\Property(property="support_note", type="string", example="If this error persists, please contact support@academiaworld.com")
+     *         )
      *     )
      * )
      */
@@ -279,29 +611,128 @@ class EventController extends Controller
     }
 
     /**
+     * Retrieve detailed information about a specific academic event
+     * 
      * @OA\Get(
      *     path="/api/v1/events/{event}",
      *     tags={"Events"},
-     *     summary="Get event details",
-     *     description="Retrieve detailed information about a specific event",
+     *     summary="Retrieve detailed information about a specific academic event",
+     *     description="Fetches comprehensive details about a specific academic event including host information, registration status, available spots, and event resources. Only published events are accessible to the public, while event organizers can view their own unpublished events. The response includes registration statistics and user-specific information when authenticated.",
+     *     operationId="getAcademicEventDetails",
      *     @OA\Parameter(
      *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event UUID",
-     *         @OA\Schema(type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
+     *         description="Event UUID identifier",
+     *         @OA\Schema(
+     *             type="string", 
+     *             format="uuid", 
+     *             example="550e8400-e29b-41d4-a716-446655440000"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="include_resources",
+     *         in="query",
+     *         description="Include associated resources in the response",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="boolean",
+     *             default=false,
+     *             example=true
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="include_forums",
+     *         in="query",
+     *         description="Include discussion forums in the response",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="boolean",
+     *             default=false,
+     *             example=true
+     *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Event details retrieved successfully",
+     *         description="Event details retrieved successfully with comprehensive information",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="data", ref="#/components/schemas/Event")
+     *             @OA\Property(property="message", type="string", example="Event retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 description="Complete event information with registration details",
+     *                 @OA\Property(property="event", ref="#/components/schemas/Event", description="Complete event details"),
+     *                 @OA\Property(property="registration_count", type="integer", example=47, description="Current number of registered attendees"),
+     *                 @OA\Property(property="available_spots", type="integer", nullable=true, example=153, description="Remaining registration spots (null if unlimited)"),
+     *                 @OA\Property(property="is_full", type="boolean", example=false, description="Whether the event has reached capacity"),
+     *                 @OA\Property(property="user_registered", type="boolean", example=true, description="Whether the current user is registered (only for authenticated users)"),
+     *                 @OA\Property(
+     *                     property="registration_status",
+     *                     type="object",
+     *                     description="Registration availability information",
+     *                     @OA\Property(property="is_open", type="boolean", example=true, description="Whether registration is currently open"),
+     *                     @OA\Property(property="deadline", type="string", format="date-time", nullable=true, example="2025-09-10T23:59:59Z"),
+     *                     @OA\Property(property="requires_approval", type="boolean", example=false, description="Whether registrations require host approval")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="event_statistics",
+     *                     type="object",
+     *                     description="Event engagement statistics",
+     *                     @OA\Property(property="view_count", type="integer", example=342, description="Number of times event has been viewed"),
+     *                     @OA\Property(property="share_count", type="integer", example=28, description="Number of times event has been shared"),
+     *                     @OA\Property(property="forum_posts", type="integer", example=15, description="Number of discussion forum posts"),
+     *                     @OA\Property(property="resources_count", type="integer", example=8, description="Number of associated resources")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="similar_events",
+     *                     type="array",
+     *                     @OA\Items(ref="#/components/schemas/Event"),
+     *                     description="Other events with similar tags or from the same host (maximum 3)"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="accessibility_info",
+     *                     type="object",
+     *                     description="Accessibility and special requirements information",
+     *                     @OA\Property(property="wheelchair_accessible", type="boolean", nullable=true, example=true),
+     *                     @OA\Property(property="sign_language", type="boolean", nullable=true, example=false),
+     *                     @OA\Property(property="live_captions", type="boolean", nullable=true, example=true),
+     *                     @OA\Property(property="special_needs_contact", type="string", nullable=true, example="accessibility@university.edu")
+     *                 )
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=404,
-     *         description="Event not found or not accessible",
+     *         description="Event not found or not accessible to the current user",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Event not found or not accessible"),
+     *             @OA\Property(property="error_code", type="string", example="EVENT_NOT_FOUND"),
+     *             @OA\Property(
+     *                 property="possible_reasons",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Event UUID does not exist", "Event is not published yet", "Event is private and you're not invited", "Event has been cancelled or banned"}
+     *             ),
+     *             @OA\Property(
+     *                 property="suggestions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Check the event UUID for typos", "Contact the event organizer if you believe you should have access", "Browse other available events in our catalog"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access forbidden - event is private or restricted",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="This event is private and requires an invitation"),
+     *             @OA\Property(property="error_code", type="string", example="EVENT_ACCESS_RESTRICTED"),
+     *             @OA\Property(property="contact_organizer", type="string", example="To request access, contact the event organizer")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error while retrieving event details",
      *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      *     )
      * )
@@ -563,47 +994,212 @@ class EventController extends Controller
     }
 
     /**
+     * Register academic user for an event
+     * 
      * @OA\Post(
      *     path="/api/v1/events/{event}/register",
      *     tags={"Events"},
-     *     summary="Register for an event",
-     *     description="Register the authenticated user for a specific event",
+     *     summary="Register academic user for an event",
+     *     description="Registers the authenticated academic user for a specific event, enabling them to attend and participate in discussions. The registration process includes capacity checks, deadline validation, and automatic confirmation email sending. Users cannot register for their own events or events that have reached capacity.",
+     *     operationId="registerForAcademicEvent",
      *     security={{"sanctum":{}}},
      *     @OA\Parameter(
      *         name="event",
      *         in="path",
      *         required=true,
-     *         description="Event UUID",
-     *         @OA\Schema(type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
+     *         description="Event UUID identifier",
+     *         @OA\Schema(
+     *             type="string", 
+     *             format="uuid", 
+     *             example="550e8400-e29b-41d4-a716-446655440000"
+     *         )
      *     ),
      *     @OA\RequestBody(
      *         required=false,
+     *         description="Optional registration information",
      *         @OA\JsonContent(
-     *             @OA\Property(property="notes", type="string", example="Looking forward to this workshop!")
+     *             @OA\Property(
+     *                 property="notes", 
+     *                 type="string", 
+     *                 maxLength=1000,
+     *                 example="I'm particularly interested in the AI ethics sessions and would like to contribute to the panel discussion.",
+     *                 description="Optional notes or comments about your attendance"
+     *             ),
+     *             @OA\Property(
+     *                 property="dietary_requirements", 
+     *                 type="string", 
+     *                 maxLength=500,
+     *                 example="Vegetarian, no nuts",
+     *                 description="Special dietary requirements for catered events"
+     *             ),
+     *             @OA\Property(
+     *                 property="accessibility_needs", 
+     *                 type="string", 
+     *                 maxLength=500,
+     *                 example="Wheelchair access required",
+     *                 description="Accessibility accommodations needed"
+     *             ),
+     *             @OA\Property(
+     *                 property="emergency_contact", 
+     *                 type="object",
+     *                 description="Emergency contact information",
+     *                 @OA\Property(property="name", type="string", example="Jane Doe"),
+     *                 @OA\Property(property="phone", type="string", example="+1-555-987-6543"),
+     *                 @OA\Property(property="relationship", type="string", example="Colleague")
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=201,
-     *         description="Registration successful",
+     *         description="Registration successful - user is now registered for the event",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Successfully registered for event"),
-     *             @OA\Property(property="data", type="object",
+     *             @OA\Property(property="message", type="string", example="Successfully registered for 'AI in Healthcare Conference'! Confirmation email sent."),
+     *             @OA\Property(
+     *                 property="data", 
+     *                 type="object",
+     *                 description="Registration confirmation details",
+     *                 @OA\Property(property="registration_uuid", type="string", format="uuid", example="abc12345-e29b-41d4-a716-446655440999", description="Unique registration identifier"),
      *                 @OA\Property(property="event_uuid", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
      *                 @OA\Property(property="user_uuid", type="string", format="uuid", example="660f9400-e29b-41d4-a716-446655440001"),
-     *                 @OA\Property(property="notes", type="string", nullable=true),
-     *                 @OA\Property(property="registered_at", type="string", format="date-time")
+     *                 @OA\Property(property="status", type="string", example="registered", description="Registration status"),
+     *                 @OA\Property(property="notes", type="string", nullable=true, example="Looking forward to the AI sessions!"),
+     *                 @OA\Property(property="registered_at", type="string", format="date-time", example="2025-08-06T16:30:00Z"),
+     *                 @OA\Property(property="registration_number", type="string", example="AI2025-0042", description="Human-readable registration number")
+     *             ),
+     *             @OA\Property(
+     *                 property="event_info",
+     *                 type="object",
+     *                 description="Relevant event information for the registrant",
+     *                 @OA\Property(property="title", type="string", example="AI in Healthcare Conference"),
+     *                 @OA\Property(property="start_date", type="string", format="date-time", example="2025-10-15T09:00:00Z"),
+     *                 @OA\Property(property="location", type="string", example="Stanford Medical Center"),
+     *                 @OA\Property(property="total_registered", type="integer", example=48, description="Total registrations after this one"),
+     *                 @OA\Property(property="spots_remaining", type="integer", nullable=true, example=152)
+     *             ),
+     *             @OA\Property(
+     *                 property="next_steps",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Check your email for confirmation details", "Add the event to your calendar", "Join the event discussion forum", "Download pre-event materials when available", "Contact organizer with any questions"},
+     *                 description="Recommended actions after registration"
+     *             ),
+     *             @OA\Property(
+     *                 property="important_info",
+     *                 type="object",
+     *                 description="Important information for attendees",
+     *                 @OA\Property(property="check_in_time", type="string", example="Please arrive 30 minutes early for check-in"),
+     *                 @OA\Property(property="what_to_bring", type="string", example="Laptop, notebook, business cards"),
+     *                 @OA\Property(property="parking_info", type="string", example="Free parking available in Lot B"),
+     *                 @OA\Property(property="cancellation_policy", type="string", example="Free cancellation up to 48 hours before the event")
      *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=400,
-     *         description="Registration failed",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *         description="Registration failed due to business rules or constraints",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Registration failed: Event has reached capacity"),
+     *             @OA\Property(property="error_code", type="string", example="EVENT_FULL"),
+     *             @OA\Property(
+     *                 property="failure_reasons",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Event has reached maximum capacity", "Registration deadline has passed", "Event is not published", "You are already registered", "Event hosts cannot register for their own events"}
+     *             ),
+     *             @OA\Property(
+     *                 property="suggestions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Join the waitlist if available", "Look for similar upcoming events", "Contact the organizer about potential additional spots", "Set up an alert for future events by this organizer"}
+     *             ),
+     *             @OA\Property(
+     *                 property="alternative_actions",
+     *                 type="object",
+     *                 description="Alternative actions user can take",
+     *                 @OA\Property(property="waitlist_available", type="boolean", example=true),
+     *                 @OA\Property(property="similar_events", type="string", example="/api/v1/events?search=AI%20healthcare"),
+     *                 @OA\Property(property="contact_organizer", type="string", example="conference@stanford.edu")
+     *             )
+     *         )
      *     ),
      *     @OA\Response(
      *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *         description="User not authenticated",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="You must be logged in to register for events"),
+     *             @OA\Property(property="error_code", type="string", example="AUTHENTICATION_REQUIRED"),
+     *             @OA\Property(property="login_url", type="string", example="/api/v1/auth/login")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="User lacks permission to register for this event",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Your account does not have permission to register for events"),
+     *             @OA\Property(property="error_code", type="string", example="INSUFFICIENT_PERMISSIONS"),
+     *             @OA\Property(
+     *                 property="required_conditions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Email verification required", "Active account status", "Institution affiliation verified"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Event not found or not available for registration",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Event not found or not available for registration"),
+     *             @OA\Property(property="error_code", type="string", example="EVENT_NOT_FOUND"),
+     *             @OA\Property(
+     *                 property="possible_reasons",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Event UUID does not exist", "Event has been cancelled", "Event is private and you're not invited", "Event has been deleted by organizer"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=409,
+     *         description="Conflict - user is already registered for this event",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="You are already registered for this event"),
+     *             @OA\Property(property="error_code", type="string", example="ALREADY_REGISTERED"),
+     *             @OA\Property(
+     *                 property="existing_registration",
+     *                 type="object",
+     *                 description="Details of existing registration",
+     *                 @OA\Property(property="registered_at", type="string", format="date-time", example="2025-08-01T10:30:00Z"),
+     *                 @OA\Property(property="registration_number", type="string", example="AI2025-0031"),
+     *                 @OA\Property(property="modify_registration", type="string", example="/api/v1/events/550e8400-e29b-41d4-a716-446655440000/registration")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation errors in registration data",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors", 
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="notes", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"The notes may not be greater than 1000 characters."}
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error during registration process",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Registration failed due to server error. Please try again."),
+     *             @OA\Property(property="error_code", type="string", example="REGISTRATION_ERROR"),
+     *             @OA\Property(property="support_note", type="string", example="If this error persists, please contact support@academiaworld.com")
+     *         )
      *     )
      * )
      */

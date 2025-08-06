@@ -38,58 +38,154 @@ class AuthController extends Controller
     }
 
     /**
-     * Register a new user
+     * Register a new academic user account
      * 
      * @OA\Post(
      *     path="/api/v1/auth/register",
-     *     summary="Register a new user",
-     *     description="Create a new user account with academic information",
+     *     summary="Register a new academic user account",
+     *     description="Creates a new user account for academic professionals including researchers, faculty, students, and staff. The account requires email verification before activation. All fields except department and position are required for academic verification purposes.",
      *     operationId="registerUser",
      *     tags={"Authentication"},
      *     @OA\RequestBody(
      *         required=true,
+     *         description="Academic user registration information",
      *         @OA\JsonContent(
      *             required={"first_name","last_name","email","password","password_confirmation","institution"},
-     *             @OA\Property(property="first_name", type="string", maxLength=255, example="John"),
-     *             @OA\Property(property="last_name", type="string", maxLength=255, example="Doe"),
-     *             @OA\Property(property="email", type="string", format="email", example="john.doe@university.edu"),
-     *             @OA\Property(property="password", type="string", minLength=8, example="password123"),
-     *             @OA\Property(property="password_confirmation", type="string", example="password123"),
-     *             @OA\Property(property="institution", type="string", maxLength=255, example="University of Technology"),
-     *             @OA\Property(property="department", type="string", maxLength=255, example="Computer Science"),
-     *             @OA\Property(property="position", type="string", maxLength=255, example="Professor")
+     *             @OA\Property(
+     *                 property="first_name", 
+     *                 type="string", 
+     *                 minLength=1,
+     *                 maxLength=255, 
+     *                 example="Dr. Sarah", 
+     *                 description="User's first name or preferred name (including titles if desired)"
+     *             ),
+     *             @OA\Property(
+     *                 property="last_name", 
+     *                 type="string", 
+     *                 minLength=1,
+     *                 maxLength=255, 
+     *                 example="Johnson", 
+     *                 description="User's last name or surname"
+     *             ),
+     *             @OA\Property(
+     *                 property="email", 
+     *                 type="string", 
+     *                 format="email", 
+     *                 maxLength=255,
+     *                 example="sarah.johnson@university.edu", 
+     *                 description="Academic email address (must be unique across the platform). Preferably use institutional email."
+     *             ),
+     *             @OA\Property(
+     *                 property="password", 
+     *                 type="string", 
+     *                 minLength=8, 
+     *                 example="AcademicPass2025!", 
+     *                 description="Password with minimum 8 characters. Should include uppercase, lowercase, numbers, and special characters for security."
+     *             ),
+     *             @OA\Property(
+     *                 property="password_confirmation", 
+     *                 type="string", 
+     *                 example="AcademicPass2025!", 
+     *                 description="Password confirmation - must exactly match the password field"
+     *             ),
+     *             @OA\Property(
+     *                 property="institution", 
+     *                 type="string", 
+     *                 minLength=1,
+     *                 maxLength=255, 
+     *                 example="Massachusetts Institute of Technology", 
+     *                 description="Full name of the academic institution, university, or research organization"
+     *             ),
+     *             @OA\Property(
+     *                 property="department", 
+     *                 type="string", 
+     *                 maxLength=255, 
+     *                 nullable=true,
+     *                 example="Department of Computer Science and Artificial Intelligence", 
+     *                 description="Academic department, school, or faculty within the institution (optional)"
+     *             ),
+     *             @OA\Property(
+     *                 property="position", 
+     *                 type="string", 
+     *                 maxLength=255, 
+     *                 nullable=true,
+     *                 example="Associate Professor", 
+     *                 description="Academic position, title, or role (e.g., Professor, PhD Student, Research Associate, Postdoc) (optional)"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=201,
-     *         description="User registered successfully",
+     *         description="User registration successful - email verification required",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Registration successful. Please check your email for verification."),
+     *             @OA\Property(property="message", type="string", example="Registration successful. Please check your email for verification to activate your account."),
      *             @OA\Property(
      *                 property="user",
      *                 type="object",
-     *                 @OA\Property(property="uuid", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
-     *                 @OA\Property(property="name", type="string", example="John Doe"),
-     *                 @OA\Property(property="email", type="string", format="email", example="john.doe@university.edu"),
-     *                 @OA\Property(property="institution", type="string", example="University of Technology"),
-     *                 @OA\Property(property="account_status", type="string", example="pending")
+     *                 description="Basic user information (sensitive data excluded)",
+     *                 @OA\Property(property="uuid", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000", description="Unique user identifier"),
+     *                 @OA\Property(property="name", type="string", example="Dr. Sarah Johnson", description="Full display name"),
+     *                 @OA\Property(property="first_name", type="string", example="Dr. Sarah"),
+     *                 @OA\Property(property="last_name", type="string", example="Johnson"),
+     *                 @OA\Property(property="email", type="string", format="email", example="sarah.johnson@university.edu"),
+     *                 @OA\Property(property="institution", type="string", example="Massachusetts Institute of Technology"),
+     *                 @OA\Property(property="department", type="string", nullable=true, example="Department of Computer Science and Artificial Intelligence"),
+     *                 @OA\Property(property="position", type="string", nullable=true, example="Associate Professor"),
+     *                 @OA\Property(property="account_status", type="string", example="pending", description="Account requires email verification"),
+     *                 @OA\Property(property="created_at", type="string", format="date-time", example="2025-08-06T15:30:00Z")
+     *             ),
+     *             @OA\Property(
+     *                 property="next_steps",
+     *                 type="object",
+     *                 description="Instructions for completing registration",
+     *                 @OA\Property(property="verify_email", type="string", example="Check your email inbox for a verification link"),
+     *                 @OA\Property(property="email_expires", type="string", example="Verification link expires in 24 hours"),
+     *                 @OA\Property(property="resend_option", type="string", example="Use /api/v1/auth/resend-verification to resend if needed")
      *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=422,
-     *         description="Validation errors",
+     *         description="Validation errors in submitted data",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Validation errors"),
-     *             @OA\Property(property="errors", type="object")
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors", 
+     *                 type="object",
+     *                 description="Field-specific validation errors",
+     *                 @OA\Property(
+     *                     property="email", 
+     *                     type="array", 
+     *                     @OA\Items(type="string", example="The email has already been taken.")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password", 
+     *                     type="array", 
+     *                     @OA\Items(type="string", example="The password confirmation does not match.")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="institution", 
+     *                     type="array", 
+     *                     @OA\Items(type="string", example="The institution field is required.")
+     *                 )
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=500,
-     *         description="Registration failed",
+     *         description="Internal server error during registration",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Registration failed"),
-     *             @OA\Property(property="error", type="string", example="Something went wrong. Please try again.")
+     *             @OA\Property(property="message", type="string", example="Registration failed due to server error"),
+     *             @OA\Property(property="error", type="string", example="An unexpected error occurred. Please try again or contact support if the problem persists."),
+     *             @OA\Property(property="error_code", type="string", example="REGISTRATION_FAILED")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Too many registration attempts",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Too many registration attempts. Please try again later."),
+     *             @OA\Property(property="retry_after", type="integer", example=60, description="Seconds to wait before retry")
      *         )
      *     )
      * )
@@ -170,43 +266,154 @@ class AuthController extends Controller
     }
 
     /**
+     * Authenticate academic user and establish session
+     * 
      * @OA\Post(
      *     path="/api/v1/auth/login",
      *     tags={"Authentication"},
-     *     summary="User login",
-     *     description="Authenticate user and return access token. Also sets an HTTP-only cookie for automatic authentication in subsequent requests.",
+     *     summary="Authenticate academic user and establish session",
+     *     description="Authenticates a registered academic user using email and password credentials. Upon successful authentication, returns an access token and sets an HTTP-only authentication cookie for seamless web client integration. Supports both cookie-based and token-based authentication flows.",
+     *     operationId="loginUser",
      *     @OA\RequestBody(
      *         required=true,
+     *         description="User login credentials",
      *         @OA\JsonContent(
      *             required={"email", "password"},
-     *             @OA\Property(property="email", type="string", format="email", example="john.doe@university.edu"),
-     *             @OA\Property(property="password", type="string", example="password123")
+     *             @OA\Property(
+     *                 property="email", 
+     *                 type="string", 
+     *                 format="email", 
+     *                 maxLength=255,
+     *                 example="sarah.johnson@university.edu",
+     *                 description="Registered email address of the academic user"
+     *             ),
+     *             @OA\Property(
+     *                 property="password", 
+     *                 type="string", 
+     *                 minLength=1,
+     *                 example="AcademicPass2025!",
+     *                 description="User's account password"
+     *             ),
+     *             @OA\Property(
+     *                 property="remember_me", 
+     *                 type="boolean", 
+     *                 example=true,
+     *                 description="Extend token validity for long-term sessions (optional)"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Login successful. Access token returned in response body and also set as HTTP-only cookie 'academia_world_token'.",
+     *         description="Authentication successful - user logged in",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Login successful"),
-     *             @OA\Property(property="access_token", type="string", example="1|TOKEN_HERE"),
-     *             @OA\Property(property="token_type", type="string", example="Bearer"),
-     *             @OA\Property(property="expires_in", type="integer", example=172800, description="Token expiration in minutes"),
-     *             @OA\Property(property="user", ref="#/components/schemas/User")
+     *             @OA\Property(property="message", type="string", example="Login successful. Welcome back!"),
+     *             @OA\Property(
+     *                 property="access_token", 
+     *                 type="string", 
+     *                 example="1|AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdefghijklmnopqrstuvwxyz",
+     *                 description="Bearer token for API authentication"
+     *             ),
+     *             @OA\Property(property="token_type", type="string", example="Bearer", description="Type of authentication token"),
+     *             @OA\Property(
+     *                 property="expires_in", 
+     *                 type="integer", 
+     *                 example=172800, 
+     *                 description="Token expiration time in seconds (48 hours default)"
+     *             ),
+     *             @OA\Property(
+     *                 property="user", 
+     *                 ref="#/components/schemas/User",
+     *                 description="Complete authenticated user profile"
+     *             ),
+     *             @OA\Property(
+     *                 property="permissions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"create_events", "manage_resources", "moderate_forums"},
+     *                 description="User's platform permissions"
+     *             ),
+     *             @OA\Property(
+     *                 property="session_info",
+     *                 type="object",
+     *                 description="Session metadata",
+     *                 @OA\Property(property="login_time", type="string", format="date-time", example="2025-08-06T15:30:00Z"),
+     *                 @OA\Property(property="ip_address", type="string", example="192.168.1.100"),
+     *                 @OA\Property(property="user_agent", type="string", example="Mozilla/5.0..."),
+     *                 @OA\Property(property="last_login", type="string", format="date-time", nullable=true, example="2025-08-05T10:20:00Z")
+     *             )
      *         ),
      *         @OA\Header(
      *             header="Set-Cookie",
-     *             description="HTTP-only authentication cookie",
-     *             @OA\Schema(type="string", example="academia_world_token=1|TOKEN_HERE; Path=/; HttpOnly; SameSite=Lax")
+     *             description="HTTP-only authentication cookie for automatic session management",
+     *             @OA\Schema(
+     *                 type="string", 
+     *                 example="academia_world_token=1|AbCdEfGhIjKlMnOpQrStUvWxYz; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=172800"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=401,
-     *         description="Invalid credentials",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *         description="Authentication failed - invalid credentials",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid credentials. Please check your email and password."),
+     *             @OA\Property(property="error_code", type="string", example="INVALID_CREDENTIALS"),
+     *             @OA\Property(
+     *                 property="suggestions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Verify your email address is correct", "Use 'Forgot Password' if you can't remember your password", "Ensure your account is not suspended"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Account requires verification or is suspended",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Account requires email verification before login."),
+     *             @OA\Property(property="error_code", type="string", example="EMAIL_NOT_VERIFIED"),
+     *             @OA\Property(property="action_required", type="string", example="email_verification"),
+     *             @OA\Property(
+     *                 property="resolution",
+     *                 type="object",
+     *                 description="Steps to resolve the issue",
+     *                 @OA\Property(property="resend_verification", type="string", example="/api/v1/auth/resend-verification"),
+     *                 @OA\Property(property="support_contact", type="string", example="If you need assistance, contact support@academiaworld.com")
+     *             )
+     *         )
      *     ),
      *     @OA\Response(
      *         response=422,
-     *         description="Validation errors",
+     *         description="Validation errors in request data",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors", 
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="email", 
+     *                     type="array", 
+     *                     @OA\Items(type="string", example="The email field is required.")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password", 
+     *                     type="array", 
+     *                     @OA\Items(type="string", example="The password field is required.")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Too many login attempts - rate limited",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Too many login attempts. Account temporarily locked."),
+     *             @OA\Property(property="retry_after", type="integer", example=300, description="Seconds until next login attempt allowed"),
+     *             @OA\Property(property="lockout_expires", type="string", format="date-time", example="2025-08-06T15:35:00Z")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error during authentication",
      *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
      *     )
      * )
@@ -336,23 +543,74 @@ class AuthController extends Controller
     }
 
     /**
+     * Securely logout academic user and terminate session
+     * 
      * @OA\Post(
      *     path="/api/v1/auth/logout",
      *     tags={"Authentication"},
-     *     summary="User logout",
-     *     description="Logout user and invalidate all access tokens",
+     *     summary="Securely logout academic user and terminate session",
+     *     description="Safely terminates the user's authenticated session by invalidating all active access tokens and clearing HTTP-only authentication cookies. This ensures complete session cleanup and security. The logout action is tracked for security auditing and analytics purposes.",
+     *     operationId="logoutUser",
      *     security={{"sanctum":{}}},
+     *     @OA\RequestBody(
+     *         description="No request body required for logout",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             description="Empty request body"
+     *         )
+     *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Logout successful",
+     *         description="User successfully logged out and session terminated",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Logged out successfully")
+     *             @OA\Property(property="message", type="string", example="Logged out successfully. Thank you for using Academia World!"),
+     *             @OA\Property(
+     *                 property="session_info",
+     *                 type="object",
+     *                 description="Session termination details",
+     *                 @OA\Property(property="logout_time", type="string", format="date-time", example="2025-08-06T16:45:00Z"),
+     *                 @OA\Property(property="tokens_invalidated", type="integer", example=3, description="Number of tokens invalidated"),
+     *                 @OA\Property(property="session_id", type="string", example="sess_abc123", description="Session identifier for audit trails")
+     *             ),
+     *             @OA\Property(
+     *                 property="next_steps",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Your session has been completely terminated", "You'll need to login again to access your account", "All device sessions remain active unless logged out individually"},
+     *                 description="Information about post-logout state"
+     *             )
+     *         ),
+     *         @OA\Header(
+     *             header="Set-Cookie",
+     *             description="Clears the HTTP-only authentication cookie",
+     *             @OA\Schema(
+     *                 type="string", 
+     *                 example="academia_world_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=401,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *         description="User not authenticated or session already expired",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="User not authenticated. Session may have already expired."),
+     *             @OA\Property(property="error_code", type="string", example="NOT_AUTHENTICATED"),
+     *             @OA\Property(
+     *                 property="suggestions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Your session may have already expired", "No action required if you're already logged out", "Use the login endpoint to start a new session"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error during logout process",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="An error occurred during logout. Please try again."),
+     *             @OA\Property(property="error_code", type="string", example="LOGOUT_ERROR"),
+     *             @OA\Property(property="support_note", type="string", example="If this error persists, please contact support@academiaworld.com")
+     *         )
      *     )
      * )
      */
@@ -669,45 +927,134 @@ class AuthController extends Controller
     }
 
     /**
-     * Verify email address
+     * Verify academic user email address and auto-login
      * 
      * @OA\Post(
      *     path="/api/v1/auth/verify-email",
      *     tags={"Authentication"},
-     *     summary="Verify user email address and auto-login",
-     *     description="Verify user email address using verification token and automatically log them in",
+     *     summary="Verify academic user email address and establish authenticated session",
+     *     description="Verifies a user's email address using a secure verification token sent via email during registration. Upon successful verification, the user's account is fully activated and they are automatically logged in with a long-term authentication session (4 months). This process completes the account setup flow for new academic users.",
+     *     operationId="verifyUserEmail",
      *     @OA\RequestBody(
      *         required=true,
+     *         description="Email verification token from verification email",
      *         @OA\JsonContent(
      *             required={"token"},
-     *             @OA\Property(property="token", type="string", example="abc123def456")
+     *             @OA\Property(
+     *                 property="token", 
+     *                 type="string", 
+     *                 minLength=32,
+     *                 maxLength=128,
+     *                 example="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+     *                 description="Unique verification token received in email"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Email verified successfully and user logged in",
+     *         description="Email verified successfully and user automatically logged in",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Email verified successfully. You are now logged in."),
-     *             @OA\Property(property="access_token", type="string", example="1|abc123def456..."),
-     *             @OA\Property(property="token_type", type="string", example="Bearer"),
-     *             @OA\Property(property="expires_in", type="integer", example=172800),
+     *             @OA\Property(property="message", type="string", example="Email verified successfully. You are now logged in. Welcome to Academia World!"),
+     *             @OA\Property(
+     *                 property="access_token", 
+     *                 type="string", 
+     *                 example="1|AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdefghijklmnopqrstuvwxyz",
+     *                 description="Long-term Bearer token for API authentication (4 months validity)"
+     *             ),
+     *             @OA\Property(property="token_type", type="string", example="Bearer", description="Type of authentication token"),
+     *             @OA\Property(
+     *                 property="expires_in", 
+     *                 type="integer", 
+     *                 example=172800, 
+     *                 description="Token expiration time in minutes (4 months = 172,800 minutes)"
+     *             ),
      *             @OA\Property(
      *                 property="user",
      *                 type="object",
-     *                 @OA\Property(property="uuid", type="string", format="uuid"),
-     *                 @OA\Property(property="name", type="string"),
-     *                 @OA\Property(property="email", type="string"),
-     *                 @OA\Property(property="institution", type="string"),
-     *                 @OA\Property(property="department", type="string"),
-     *                 @OA\Property(property="position", type="string"),
-     *                 @OA\Property(property="account_status", type="string"),
-     *                 @OA\Property(property="is_admin", type="boolean")
+     *                 description="Verified user profile data",
+     *                 @OA\Property(property="uuid", type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="name", type="string", example="Dr. Sarah Johnson"),
+     *                 @OA\Property(property="email", type="string", format="email", example="sarah.johnson@university.edu"),
+     *                 @OA\Property(property="institution", type="string", example="Stanford University"),
+     *                 @OA\Property(property="department", type="string", example="Computer Science"),
+     *                 @OA\Property(property="position", type="string", example="Assistant Professor"),
+     *                 @OA\Property(property="account_status", type="string", example="active", description="Account is now fully active"),
+     *                 @OA\Property(property="is_admin", type="boolean", example=false)
+     *             ),
+     *             @OA\Property(
+     *                 property="account_benefits",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Full access to academic events", "Ability to create and manage resources", "Participate in discussion forums", "Connect with other academics", "Access to premium features"},
+     *                 description="Platform features now available to verified user"
+     *             ),
+     *             @OA\Property(
+     *                 property="next_steps",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Complete your profile", "Explore upcoming academic events", "Join relevant discussion forums", "Upload your first academic resource"},
+     *                 description="Suggested actions for new verified users"
+     *             )
+     *         ),
+     *         @OA\Header(
+     *             header="Set-Cookie",
+     *             description="Long-term HTTP-only authentication cookie (4 months)",
+     *             @OA\Schema(
+     *                 type="string", 
+     *                 example="academia_world_token=1|AbCdEfGhIjKlMnOpQrStUvWxYz; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=10368000"
      *             )
      *         )
      *     ),
-     *     @OA\Response(response=400, description="Invalid or expired token"),
-     *     @OA\Response(response=422, description="Validation errors")
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid, expired, or already used verification token",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Invalid or expired verification token"),
+     *             @OA\Property(property="error_code", type="string", example="INVALID_TOKEN"),
+     *             @OA\Property(
+     *                 property="possible_causes",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Token has expired (tokens are valid for 24 hours)", "Token has already been used", "Invalid token format", "Email already verified"}
+     *             ),
+     *             @OA\Property(
+     *                 property="resolution",
+     *                 type="object",
+     *                 description="How to resolve the issue",
+     *                 @OA\Property(property="resend_verification", type="string", example="/api/v1/auth/resend-verification"),
+     *                 @OA\Property(property="support_contact", type="string", example="support@academiaworld.com"),
+     *                 @OA\Property(property="login_page", type="string", example="/login (if email is already verified)")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation errors in request data",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors", 
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="token", 
+     *                     type="array", 
+     *                     @OA\Items(type="string", example="The token field is required.")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error during verification process",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="An error occurred during email verification. Please try again."),
+     *             @OA\Property(property="error_code", type="string", example="VERIFICATION_ERROR"),
+     *             @OA\Property(property="support_note", type="string", example="If this error persists, please contact support@academiaworld.com with your verification token.")
+     *         )
+     *     )
      * )
      */
     public function verifyEmail(Request $request): JsonResponse
@@ -811,29 +1158,138 @@ class AuthController extends Controller
     }
 
     /**
-     * Resend verification email
+     * Resend academic user email verification
      * 
      * @OA\Post(
      *     path="/api/v1/auth/resend-verification",
      *     tags={"Authentication"},
-     *     summary="Resend email verification",
-     *     description="Resend email verification to user",
+     *     summary="Resend email verification to academic user",
+     *     description="Generates and sends a new email verification link to an academic user who hasn't yet verified their email address. This is useful when the original verification email was not received, has expired, or was accidentally deleted. Only works for registered users with unverified email addresses.",
+     *     operationId="resendVerificationEmail",
      *     @OA\RequestBody(
      *         required=true,
+     *         description="Email address for verification resend",
      *         @OA\JsonContent(
      *             required={"email"},
-     *             @OA\Property(property="email", type="string", format="email", example="john.doe@university.edu")
+     *             @OA\Property(
+     *                 property="email", 
+     *                 type="string", 
+     *                 format="email", 
+     *                 maxLength=255,
+     *                 example="sarah.johnson@university.edu",
+     *                 description="Registered email address that needs verification"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Verification email sent",
+     *         description="Verification email sent successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Verification email sent")
+     *             @OA\Property(property="message", type="string", example="Verification email sent successfully. Please check your inbox and spam folder."),
+     *             @OA\Property(
+     *                 property="email_info",
+     *                 type="object",
+     *                 description="Information about the verification email",
+     *                 @OA\Property(property="sent_to", type="string", example="sarah.johnson@university.edu"),
+     *                 @OA\Property(property="expires_in", type="string", example="24 hours"),
+     *                 @OA\Property(property="from_sender", type="string", example="noreply@academiaworld.com"),
+     *                 @OA\Property(property="subject_line", type="string", example="Verify Your Academia World Account")
+     *             ),
+     *             @OA\Property(
+     *                 property="instructions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Check your email inbox and spam folder", "Click the verification link in the email", "You'll be automatically logged in after verification", "Contact support if you don't receive the email within 10 minutes"},
+     *                 description="Steps to complete email verification"
+     *             ),
+     *             @OA\Property(
+     *                 property="troubleshooting",
+     *                 type="object",
+     *                 description="Common issues and solutions",
+     *                 @OA\Property(property="not_received", type="string", example="Check spam folder, wait up to 10 minutes for delivery"),
+     *                 @OA\Property(property="link_expired", type="string", example="Use this endpoint to request a new verification email"),
+     *                 @OA\Property(property="support_email", type="string", example="support@academiaworld.com")
+     *             )
      *         )
      *     ),
-     *     @OA\Response(response=400, description="Email already verified or user not found"),
-     *     @OA\Response(response=422, description="Validation errors")
+     *     @OA\Response(
+     *         response=400,
+     *         description="Email already verified or cannot resend verification",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Email is already verified"),
+     *             @OA\Property(property="error_code", type="string", example="EMAIL_ALREADY_VERIFIED"),
+     *             @OA\Property(
+     *                 property="next_steps",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Your account is already verified", "You can login normally using your credentials", "Visit the login page to access your account"},
+     *                 description="What to do when email is already verified"
+     *             ),
+     *             @OA\Property(
+     *                 property="login_url",
+     *                 type="string",
+     *                 example="/api/v1/auth/login",
+     *                 description="Login endpoint for verified users"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User account not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="User not found with this email address"),
+     *             @OA\Property(property="error_code", type="string", example="USER_NOT_FOUND"),
+     *             @OA\Property(
+     *                 property="possible_reasons",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Email address is not registered", "Typo in email address", "Account may have been deleted"},
+     *                 description="Why user might not be found"
+     *             ),
+     *             @OA\Property(
+     *                 property="suggestions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Double-check the email address spelling", "Use the registration endpoint to create a new account", "Contact support if you believe this is an error"},
+     *                 description="How to resolve the issue"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation errors in email format",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Validation errors"),
+     *             @OA\Property(
+     *                 property="errors", 
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="email", 
+     *                     type="array", 
+     *                     @OA\Items(type="string"),
+     *                     example={"The email field is required.", "The email must be a valid email address."}
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Rate limit exceeded for verification email requests",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Too many verification email requests. Please wait before requesting another."),
+     *             @OA\Property(property="retry_after", type="integer", example=300, description="Seconds until next request allowed"),
+     *             @OA\Property(property="limit_info", type="string", example="Maximum 3 verification emails per hour per email address")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error during email sending",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Failed to send verification email. Please try again later."),
+     *             @OA\Property(property="error_code", type="string", example="EMAIL_SEND_FAILED"),
+     *             @OA\Property(property="support_note", type="string", example="If this error persists, please contact support@academiaworld.com")
+     *         )
+     *     )
      * )
      */
     public function resendVerification(Request $request): JsonResponse

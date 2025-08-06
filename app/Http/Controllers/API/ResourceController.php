@@ -26,41 +26,172 @@ class ResourceController extends Controller
 {
     use HandlesBase64Uploads;
     /**
+     * Retrieve academic resources for a specific event
+     * 
      * @OA\Get(
      *     path="/api/v1/events/{event}/resources",
      *     tags={"Resources"},
-     *     summary="Get event resources",
-     *     description="Retrieve all resources for a specific event",
+     *     summary="Retrieve academic resources for a specific event",
+     *     description="Fetches all academic resources (presentations, papers, recordings, datasets, etc.) associated with an event. Access control ensures users only see resources they're permitted to view based on their registration status and the resource's visibility settings. Resources include presentations, research papers, recordings, datasets, and other academic materials.",
+     *     operationId="getEventResources",
      *     @OA\Parameter(
      *         name="event",
      *         in="path",
-     *         description="Event UUID",
+     *         description="Event UUID identifier",
      *         required=true,
-     *         @OA\Schema(type="string", format="uuid")
+     *         @OA\Schema(
+     *             type="string", 
+     *             format="uuid",
+     *             example="550e8400-e29b-41d4-a716-446655440000"
+     *         )
      *     ),
      *     @OA\Parameter(
      *         name="type",
      *         in="query",
-     *         description="Filter by resource type",
+     *         description="Filter resources by academic resource type",
      *         required=false,
-     *         @OA\Schema(type="string", enum={"presentation", "paper", "recording", "agenda", "other"})
+     *         @OA\Schema(
+     *             type="string", 
+     *             enum={"presentation", "paper", "recording", "agenda", "poster", "handout", "dataset", "code", "other"},
+     *             example="presentation"
+     *         )
      *     ),
      *     @OA\Parameter(
      *         name="public_only",
      *         in="query",
-     *         description="Show only public resources",
+     *         description="Show only publicly accessible resources (no authentication required)",
      *         required=false,
-     *         @OA\Schema(type="boolean")
+     *         @OA\Schema(
+     *             type="boolean",
+     *             default=false,
+     *             example=true
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="downloadable_only",
+     *         in="query",
+     *         description="Filter to show only downloadable resources",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="boolean",
+     *             default=false,
+     *             example=false
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Search in resource titles and descriptions",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="string",
+     *             maxLength=255,
+     *             example="machine learning slides"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_by",
+     *         in="query",
+     *         description="Sort resources by field",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"created_at", "title", "download_count", "view_count", "file_size"},
+     *             default="created_at",
+     *             example="download_count"
+     *         )
+     *     ),
+     *     @OA\Parameter(
+     *         name="sort_order",
+     *         in="query",
+     *         description="Sort order direction",
+     *         required=false,
+     *         @OA\Schema(
+     *             type="string",
+     *             enum={"asc", "desc"},
+     *             default="desc",
+     *             example="desc"
+     *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Resources retrieved successfully",
+     *         description="Academic resources retrieved successfully with access control applied",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/EventResource"))
+     *             @OA\Property(property="message", type="string", example="Event resources retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data", 
+     *                 type="array", 
+     *                 description="Array of accessible event resources",
+     *                 @OA\Items(ref="#/components/schemas/EventResource")
+     *             ),
+     *             @OA\Property(
+     *                 property="access_info",
+     *                 type="object",
+     *                 description="Information about user's access level",
+     *                 @OA\Property(property="user_role", type="string", example="registered_attendee", enum={"guest", "registered_attendee", "event_host", "admin"}),
+     *                 @OA\Property(property="can_upload", type="boolean", example=false, description="Whether user can upload resources"),
+     *                 @OA\Property(property="total_accessible", type="integer", example=8, description="Total resources user can access"),
+     *                 @OA\Property(property="total_public", type="integer", example=5, description="Public resources available to all")
+     *             ),
+     *             @OA\Property(
+     *                 property="resource_summary",
+     *                 type="object",
+     *                 description="Summary of available resource types",
+     *                 @OA\Property(property="presentations", type="integer", example=3),
+     *                 @OA\Property(property="papers", type="integer", example=2),
+     *                 @OA\Property(property="recordings", type="integer", example=1),
+     *                 @OA\Property(property="datasets", type="integer", example=1),
+     *                 @OA\Property(property="other", type="integer", example=1)
+     *             ),
+     *             @OA\Property(
+     *                 property="helpful_links",
+     *                 type="object",
+     *                 description="Related endpoints for resource management",
+     *                 @OA\Property(property="upload_resource", type="string", example="/api/v1/events/550e8400-e29b-41d4-a716-446655440000/resources"),
+     *                 @OA\Property(property="event_details", type="string", example="/api/v1/events/550e8400-e29b-41d4-a716-446655440000"),
+     *                 @OA\Property(property="discussion_forums", type="string", example="/api/v1/events/550e8400-e29b-41d4-a716-446655440000/forums")
+     *             )
      *         )
      *     ),
-     *     @OA\Response(response=404, description="Event not found")
+     *     @OA\Response(
+     *         response=403,
+     *         description="Access denied - insufficient permissions to view event resources",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="You don't have permission to view resources for this event"),
+     *             @OA\Property(property="error_code", type="string", example="INSUFFICIENT_ACCESS"),
+     *             @OA\Property(
+     *                 property="access_requirements",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Event registration required", "Event must be published", "Account verification needed"}
+     *             ),
+     *             @OA\Property(
+     *                 property="suggestions",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Register for the event to access private resources", "View only public resources by adding ?public_only=true", "Contact the event organizer for special access"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Event not found or not accessible",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Event not found"),
+     *             @OA\Property(property="error_code", type="string", example="EVENT_NOT_FOUND"),
+     *             @OA\Property(
+     *                 property="possible_reasons",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Event UUID does not exist", "Event has been deleted", "Event is private and you don't have access"}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error while retrieving resources",
+     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
+     *     )
      * )
      */
     public function index(Request $request, Event $event): JsonResponse
