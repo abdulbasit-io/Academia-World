@@ -46,15 +46,26 @@ class ForumPostController extends Controller
      *                     type="object",
      *                     @OA\Property(property="uuid", type="string", format="uuid"),
      *                     @OA\Property(property="content", type="string"),
-     *                     @OA\Property(property="is_pinned", type="boolean"),
-     *                     @OA\Property(property="is_solution", type="boolean"),
      *                     @OA\Property(property="likes_count", type="integer"),
      *                     @OA\Property(property="replies_count", type="integer"),
-     *                     @OA\Property(property="user", type="object",
+     *                     @OA\Property(property="edited_at", type="string", format="date-time", nullable=true),
+     *                     @OA\Property(property="created_at", type="string", format="date-time"),
+     *                     @OA\Property(property="updated_at", type="string", format="date-time"),
+     *                     @OA\Property(property="user", type="object", nullable=true,
      *                         @OA\Property(property="uuid", type="string", format="uuid"),
      *                         @OA\Property(property="name", type="string")
      *                     ),
-     *                     @OA\Property(property="created_at", type="string", format="date-time")
+     *                     @OA\Property(property="replies", type="array",
+     *                         @OA\Items(type="object",
+     *                             @OA\Property(property="uuid", type="string", format="uuid"),
+     *                             @OA\Property(property="content", type="string"),
+     *                             @OA\Property(property="created_at", type="string", format="date-time"),
+     *                             @OA\Property(property="user", type="object", nullable=true,
+     *                                 @OA\Property(property="uuid", type="string", format="uuid"),
+     *                                 @OA\Property(property="name", type="string")
+     *                             )
+     *                         )
+     *                     )
      *                 )
      *             ),
      *             @OA\Property(property="pagination", type="object",

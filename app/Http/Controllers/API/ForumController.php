@@ -45,14 +45,19 @@ class ForumController extends Controller
      *                     @OA\Property(property="title", type="string"),
      *                     @OA\Property(property="description", type="string"),
      *                     @OA\Property(property="type", type="string", enum={"general", "q_and_a", "networking", "feedback", "technical"}),
+     *                     @OA\Property(property="is_moderated", type="boolean"),
      *                     @OA\Property(property="post_count", type="integer"),
      *                     @OA\Property(property="participant_count", type="integer"),
      *                     @OA\Property(property="last_activity_at", type="string", format="datetime"),
-     *                     @OA\Property(property="creator", type="object",
+     *                     @OA\Property(property="creator", type="object", nullable=true,
      *                         @OA\Property(property="uuid", type="string", format="uuid"),
      *                         @OA\Property(property="name", type="string")
      *                     ),
-     *                     @OA\Property(property="latest_post", type="object")
+     *                     @OA\Property(property="latest_post", type="object", nullable=true,
+     *                         @OA\Property(property="user", type="string"),
+     *                         @OA\Property(property="created_at", type="string", format="datetime")
+     *                     ),
+     *                     @OA\Property(property="created_at", type="string", format="datetime")
      *                 )
      *             )
      *         )

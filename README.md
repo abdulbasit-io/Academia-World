@@ -87,58 +87,168 @@ php artisan key:generate
 Edit your `.env` file with the following essential configurations:
 
 ```env
-# Application
-APP_NAME="Academia World"
-APP_ENV=production
-APP_KEY=base64:your-generated-key
-APP_DEBUG=false
-APP_URL=https://your-domain.com
+APP_NAME=Academia-world
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+APP_FRONTEND_URL=http://localhost:3000
 
-# Database
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+# APP_PREVIOUS_KEYS=
+APP_MAINTENANCE_DRIVER=file
+APP_MAINTENANCE_STORE=database
+
+# PHP Server Configuration
+PHP_CLI_SERVER_WORKERS=4
+BCRYPT_ROUNDS=12
+
+# Logging Configuration
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_DEPRECATIONS_TRACE=false
+LOG_LEVEL=debug
+LOG_DAILY_DAYS=14
+LOG_SLACK_WEBHOOK_URL=
+
+# Database Configuration
 DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=academia_world
-DB_USERNAME=your_db_user
-DB_PASSWORD=your_db_password
+DB_HOST=
+DB_PORT=
+DB_DATABASE=
+DB_USERNAME=
+DB_PASSWORD=
+DB_URL=
+DB_SOCKET=
+DB_CHARSET=utf8mb4
+DB_COLLATION=utf8mb4_unicode_ci
+DB_FOREIGN_KEYS=true
 
-# Redis (Recommended)
+# Database Cache Configuration
+DB_CACHE_CONNECTION=
+DB_CACHE_TABLE=cache
+DB_CACHE_LOCK_CONNECTION=
+DB_CACHE_LOCK_TABLE=
+
+# Queue Database Configuration
+DB_QUEUE_CONNECTION=
+DB_QUEUE_TABLE=jobs
+DB_QUEUE=default
+DB_QUEUE_RETRY_AFTER=90
+
+# MySQL SSL Configuration
+MYSQL_ATTR_SSL_CA=
+
+# Session Configuration
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_EXPIRE_ON_CLOSE=false
+SESSION_PATH=/
+SESSION_DOMAIN=
+SESSION_SECURE_COOKIE=
+SESSION_HTTP_ONLY=true
+SESSION_SAME_SITE=lax
+SESSION_PARTITIONED_COOKIE=false
+SESSION_CONNECTION=
+SESSION_TABLE=sessions
+SESSION_STORE=
+
+# Broadcasting Configuration
+BROADCAST_CONNECTION=log
+
+# Filesystem Configuration
+FILESYSTEM_DISK=local
+
+# Queue Configuration
+QUEUE_CONNECTION=database
+QUEUE_FAILED_DRIVER=database-uuids
+
+
+# Cache Configuration
+CACHE_STORE=database
+CACHE_PREFIX=
+
+# Memcached Configuration
+MEMCACHED_HOST=127.0.0.1
+MEMCACHED_PORT=11211
+MEMCACHED_PERSISTENT_ID=
+MEMCACHED_USERNAME=
+MEMCACHED_PASSWORD=
+
+# Redis Configuration
+REDIS_CLIENT=phpredis
 REDIS_HOST=127.0.0.1
 REDIS_PASSWORD=null
 REDIS_PORT=6379
-CACHE_STORE=redis
-SESSION_DRIVER=redis
-QUEUE_CONNECTION=redis
+REDIS_URL=
+REDIS_USERNAME=
+REDIS_DB=0
+REDIS_CACHE_DB=1
+REDIS_CLUSTER=redis
+REDIS_PREFIX=
+REDIS_PERSISTENT=false
+
+# Redis Cache Configuration
+REDIS_CACHE_CONNECTION=cache
+REDIS_CACHE_LOCK_CONNECTION=default
+
+# Redis Queue Configuration
+REDIS_QUEUE_CONNECTION=default
+REDIS_QUEUE=default
+REDIS_QUEUE_RETRY_AFTER=90
 
 # Mail Configuration
-MAIL_MAILER=smtp
-MAIL_HOST=your-smtp-host
-MAIL_PORT=587
-MAIL_USERNAME=your-smtp-username
-MAIL_PASSWORD=your-smtp-password
+MAIL_MAILER=
+MAIL_HOST=
+MAIL_PORT=
+MAIL_USERNAME=
+MAIL_PASSWORD=
 MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@your-domain.com
-MAIL_FROM_NAME="${APP_NAME}"
+MAIL_EHLO_DOMAIN=localhost
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME=
+MAIL_LOG_CHANNEL=
 
-# File Storage
-FILESYSTEM_DISK=local
-# For S3 storage (optional)
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
+# AWS Configuration
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
 AWS_DEFAULT_REGION=us-east-1
-AWS_BUCKET=your-bucket-name
+AWS_BUCKET=
+AWS_URL=
+AWS_ENDPOINT=
+AWS_USE_PATH_STYLE_ENDPOINT=false
 
-# API Documentation
-L5_SWAGGER_GENERATE_ALWAYS=false
-L5_SWAGGER_CONST_HOST=https://your-domain.com
+# File Storage Configuration
+FILE_STORAGE_DRIVER=auto [ auto, local, s3, cloudinary ]
 
-# Sanctum
-SANCTUM_STATEFUL_DOMAINS=your-frontend-domain.com
-SESSION_DOMAIN=.your-domain.com
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 
-# Queue Worker (Production)
-QUEUE_CONNECTION=redis
-QUEUE_FAILED_DRIVER=database-uuids
+# Sanctum Configuration
+SANCTUM_STATEFUL_DOMAINS=localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1
+SANCTUM_TOKEN_PREFIX=
+
+
+# Authentication Configuration
+AUTH_GUARD=web
+AUTH_PASSWORD_BROKER=users
+
+# Vite Configuration
+VITE_APP_NAME="${APP_NAME}"
+
+# Telescope Configuration
+TELESCOPE_ENABLED=true
+TELESCOPE_QUEUE_CONNECTION=database
+TELESCOPE_QUEUE=telescope
+TELESCOPE_QUEUE_DELAY=10
+
 ```
 
 ### 5. Database Setup
@@ -174,92 +284,24 @@ sudo chown -R www-data:www-data storage bootstrap/cache
 sudo chmod -R 775 storage bootstrap/cache
 ```
 
-## 🔧 Configuration
-
-### Queue Workers (Production)
-For production environments, set up queue workers to handle background jobs:
-
+### 9. Start the Application
 ```bash
-# Create supervisor configuration
-sudo nano /etc/supervisor/conf.d/academia-world-worker.conf
-```
-
-```ini
-[program:academia-world-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /path/to/academia-world/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
-user=www-data
-numprocs=8
-redirect_stderr=true
-stdout_logfile=/path/to/academia-world/storage/logs/worker.log
-stopwaitsecs=3600
-```
-
+./start-dev.sh start
+``` 
+or
 ```bash
-# Update supervisor and start workers
-sudo supervisorctl reread
-sudo supervisorctl update
-sudo supervisorctl start academia-world-worker:*
+npm run start:api
 ```
-
-### Scheduled Tasks
-Add the Laravel scheduler to your crontab:
-
+or
 ```bash
-# Edit crontab
-crontab -e
-
-# Add this line
-* * * * * cd /path/to/academia-world && php artisan schedule:run >> /dev/null 2>&1
+php artisan serve --host=localhost --port=8000
 ```
-
-### Web Server Configuration
-
-#### Nginx Configuration
-```nginx
-server {
-    listen 80;
-    listen [::]:80;
-    server_name your-domain.com;
-    root /path/to/academia-world/public;
-    
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-    
-    index index.php;
-    
-    charset utf-8;
-    
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-    
-    location = /favicon.ico { access_log off; log_not_found off; }
-    location = /robots.txt  { access_log off; log_not_found off; }
-    
-    error_page 404 /index.php;
-    
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-    
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-}
-```
-
 ## 📚 API Documentation
 
 Academia World provides comprehensive API documentation through OpenAPI 3.0 specification.
 
 ### Documentation Access
+- **Root URL**: `http://localhost:8000/`
 - **Swagger UI**: `http://localhost:8000/api/documentation` (interactive)
 - **API Reference**: [docs/API_REFERENCE.md](docs/API_REFERENCE.md) (detailed guide)
 - **Production**: `https://your-domain.com/api/documentation`
@@ -290,10 +332,17 @@ Authorization: Bearer your-api-token
 - `POST /api/v1/events/{event}/register` - Register for event
 - `DELETE /api/v1/events/{event}/unregister` - Unregister from event
 
-#### Event Poster Management
-- `POST /api/v1/events/{event}/poster` - Upload event poster
+#### Resource & File Upload Scenarios
+Academia World supports resource/file uploads in three scenarios:
+1. **Multipart Form Data**: Standard file upload via form (e.g., images, PDFs, docs)
+2. **Base64-encoded JSON**: Upload files as base64 strings in JSON payloads
+3. **Remote URL**: Provide a public URL for the platform to fetch and store the file
+
+Endpoints supporting these scenarios:
+- `POST /api/v1/events/{event}/poster` - Upload event poster (form or base64)
+- `POST /api/v1/events/{event}/resources` - Upload event resource (form, base64, or remote URL)
 - `PUT /api/v1/events/{event}/poster` - Update event poster
-- `DELETE /api/v1/events/{event}/poster` - Delete event poster
+- `PUT /api/v1/resources/{resource}` - Update resource
 
 #### Event Resources
 - `GET /api/v1/events/{event}/resources` - List event resources
@@ -464,108 +513,67 @@ EXPOSE 80
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 ```
 
+
 ## 🔧 Development
 
 ### Local Development Setup
+Use the provided script for a complete development environment:
 ```bash
-# Start development server
-php artisan serve
-
-# Watch for file changes
-npm run dev
-
-# Run queue worker in development
-php artisan queue:work
-
-# Generate API documentation
-php artisan l5-swagger:generate
+./start-dev.sh
+```
+This will start the Laravel server, run queue workers, and launch Vite for asset hot-reloading. For manual steps:
+```bash
+php artisan serve         # Start Laravel server
+npm run dev               # Start Vite dev server
+php artisan queue:work    # Run queue worker
+php artisan l5-swagger:generate # Generate API docs
 ```
 
 ### Debugging and Monitoring
-
-#### Laravel Telescope
-This project uses Laravel Telescope for debugging and insight into requests, exceptions, database queries, and more during local development.
-
-You can access the Telescope dashboard at:
+Laravel Telescope is enabled for local development:
 `http://localhost:8000/telescope`
 
-**Note:** Telescope is only enabled in the local development environment for security reasons.
-
 ### IDE Support & Static Analysis
-
-Academia World includes comprehensive IDE support to minimize false positives and improve developer experience:
-
+Generate IDE helper files and run static analysis:
 ```bash
-# Generate IDE helper files (run after model changes)
 composer ide-helper
-
-# Or run individual commands:
 php artisan ide-helper:generate
 php artisan ide-helper:models --write
 php artisan ide-helper:meta
-
-# Use the development setup script for comprehensive setup
-./scripts/dev-setup.sh all
-
-# Or run specific tasks:
-./scripts/dev-setup.sh ide        # Regenerate IDE helpers
-./scripts/dev-setup.sh permissions # Fix file permissions
-./scripts/dev-setup.sh cache      # Clear caches
-./scripts/dev-setup.sh optimize   # Development optimization
+./vendor/bin/phpstan analyse
+./vendor/bin/pint
 ```
 
-### Avoiding Common Issues
+### Common Issues
+- IDE helper files are excluded from git
+- Use `./scripts/dev-setup.sh` for permissions, cache, and optimization
 
-**IDE/Static Analysis Warnings:**
-- Laravel IDE Helper package is installed and configured
-- PHPStan configuration includes rules to ignore common Eloquent false positives
-- IDE helper files are automatically excluded from git tracking
-
-**Read-Only File Conflicts:**
-- IDE helper files are excluded from version control
-- Development script handles file permissions automatically
-- Clear regeneration process prevents stale file issues
-
-### Code Quality Tools
+### Testing
+Run all tests:
 ```bash
-# Run code analysis with Larastan
-./vendor/bin/phpstan analyse
-
-# Format code with Laravel Pint
-./vendor/bin/pint
-
-# Run tests
 php artisan test
 ```
 
-## 📖 User Guide
 
-### For Administrators
-- Manage users, events, and system settings
-- View audit logs and analytics
-- Configure platform permissions
+## 🚀 Production Deployment
 
-### For Event Organizers
-- Create and manage academic events
-- Upload and share resources
-- Moderate discussion forums
-- Track event analytics
+### Production Checklist
+1. Configure `.env` for production:
+   - `APP_ENV=production`, `APP_DEBUG=false`, secure credentials
+2. Set up Redis, queue workers, and cron jobs
+3. Enable HTTPS/SSL and OPcache
+4. Set file permissions and firewall rules
+5. Monitor logs and errors (Sentry/Bugsnag recommended)
 
-### For Participants
-- Browse and register for events
-- Connect with other academics
-- Participate in discussions
-- Access shared resources
-
-
-### Development Guidelines
-- Follow PSR-12 coding standards
-- Write comprehensive tests for new features
-- Update API documentation for endpoint changes
-- Ensure all tests pass before submitting PR
-
-## 🆘 Support
-
-### Documentation
-- [API Documentation](https://your-domain.com/api/documentation)
-- [Admin Guide](docs/ADMIN_GUIDE.md)
+### Docker Deployment (Optional)
+```dockerfile
+FROM php:8.2-fpm-alpine
+RUN apk add --no-cache nginx supervisor curl zip unzip git
+COPY . /var/www/html
+WORKDIR /var/www/html
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN composer install --optimize-autoloader --no-dev
+RUN chown -R www-data:www-data storage bootstrap/cache
+EXPOSE 80
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+```

@@ -8,7 +8,36 @@ use App\Http\Controllers\Controller;
  * @OA\Info(
  *     title="Academia World API",
  *     version="1.0.0",
- *     description="**Academia World** is a comprehensive academic event management and collaboration platform designed to facilitate scholarly networking, conference organization, and academic resource sharing.\n\n## Features\n\n- **Event Management**: Create, manage, and participate in academic conferences, workshops, and seminars\n- **Academic Networking**: Connect with fellow researchers and build professional relationships\n- **Resource Sharing**: Upload, share, and access academic materials with granular permission controls\n- **Discussion Forums**: Engage in structured academic discourse with moderation capabilities\n- **User Management**: Comprehensive user profiles with institutional affiliations and academic credentials\n\n## Authentication\n\nThis API uses **Laravel Sanctum** with both cookie-based and token-based authentication:\n\n- **Cookie Authentication**: Automatically handled for web clients after login\n- **Bearer Token**: Use `Authorization: Bearer {token}` header for API clients\n\n## Base URL\n\n- **Development**: `http://localhost:8000`\n- **Production**: `https://your-domain.com`\n\n## Rate Limiting\n\n- **General API**: 60 requests per minute\n- **Authentication**: 5 requests per minute\n\n## Error Handling\n\nAll endpoints return consistent error responses with HTTP status codes and descriptive messages.",
+ *     description="**Academia World** is a comprehensive academic event management and collaboration platform designed to facilitate scholarly networking, conference organization, and academic resource sharing.
+
+## Features
+
+- **Event Management**: Create, manage, and participate in academic conferences, workshops, and seminars
+- **Academic Networking**: Connect with fellow researchers and build professional relationships  
+- **Resource Sharing**: Upload, share, and access academic materials with granular permission controls
+- **Discussion Forums**: Engage in structured academic discourse with moderation capabilities
+- **User Management**: Comprehensive user profiles with institutional affiliations and academic credentials
+
+## Authentication
+
+This API uses **Laravel Sanctum** with both cookie-based and token-based authentication:
+
+- **Cookie Authentication**: Automatically handled for web clients after login
+- **Bearer Token**: Use `Authorization: Bearer {token}` header for API clients
+
+## Base URL
+
+- **Development**: `http://localhost:8000`
+- **Production**: `https://your-domain.com`
+
+## Rate Limiting
+
+- **General API**: 60 requests per minute
+- **Authentication**: 5 requests per minute
+
+## Error Handling
+
+All endpoints return consistent error responses with HTTP status codes and descriptive messages.",
  *     @OA\Contact(
  *         name="Academia World Support",
  *         email="support@academiaworld.com"

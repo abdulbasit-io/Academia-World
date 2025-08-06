@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Academia World API",
-        "description": "**Academia World** is a comprehensive academic event management and collaboration platform designed to facilitate scholarly networking, conference organization, and academic resource sharing.\\n\\n## Features\\n\\n- **Event Management**: Create, manage, and participate in academic conferences, workshops, and seminars\\n- **Academic Networking**: Connect with fellow researchers and build professional relationships\\n- **Resource Sharing**: Upload, share, and access academic materials with granular permission controls\\n- **Discussion Forums**: Engage in structured academic discourse with moderation capabilities\\n- **User Management**: Comprehensive user profiles with institutional affiliations and academic credentials\\n\\n## Authentication\\n\\nThis API uses **Laravel Sanctum** with both cookie-based and token-based authentication:\\n\\n- **Cookie Authentication**: Automatically handled for web clients after login\\n- **Bearer Token**: Use `Authorization: Bearer {token}` header for API clients\\n\\n## Base URL\\n\\n- **Development**: `http://localhost:8000`\\n- **Production**: `https://your-domain.com`\\n\\n## Rate Limiting\\n\\n- **General API**: 60 requests per minute\\n- **Authentication**: 5 requests per minute\\n\\n## Error Handling\\n\\nAll endpoints return consistent error responses with HTTP status codes and descriptive messages.",
+        "description": "**Academia World** is a comprehensive academic event management and collaboration platform designed to facilitate scholarly networking, conference organization, and academic resource sharing.\n\n## Features\n\n- **Event Management**: Create, manage, and participate in academic conferences, workshops, and seminars\n- **Academic Networking**: Connect with fellow researchers and build professional relationships  \n- **Resource Sharing**: Upload, share, and access academic materials with granular permission controls\n- **Discussion Forums**: Engage in structured academic discourse with moderation capabilities\n- **User Management**: Comprehensive user profiles with institutional affiliations and academic credentials\n\n## Authentication\n\nThis API uses **Laravel Sanctum** with both cookie-based and token-based authentication:\n\n- **Cookie Authentication**: Automatically handled for web clients after login\n- **Bearer Token**: Use `Authorization: Bearer {token}` header for API clients\n\n## Base URL\n\n- **Development**: `http://localhost:8000`\n- **Production**: `https://your-domain.com`\n\n## Rate Limiting\n\n- **General API**: 60 requests per minute\n- **Authentication**: 5 requests per minute\n\n## Error Handling\n\nAll endpoints return consistent error responses with HTTP status codes and descriptive messages.",
         "contact": {
             "name": "Academia World Support",
             "email": "support@academiaworld.com"
@@ -2387,7 +2387,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Registration successful. Please check your email for verification to activate your account."
+                                            "example": "Registration successful. Please check your email for verification."
                                         },
                                         "user": {
                                             "description": "Basic user information (sensitive data excluded)",
@@ -2403,14 +2403,6 @@
                                                     "type": "string",
                                                     "example": "Dr. Sarah Johnson"
                                                 },
-                                                "first_name": {
-                                                    "type": "string",
-                                                    "example": "Dr. Sarah"
-                                                },
-                                                "last_name": {
-                                                    "type": "string",
-                                                    "example": "Johnson"
-                                                },
                                                 "email": {
                                                     "type": "string",
                                                     "format": "email",
@@ -2420,43 +2412,10 @@
                                                     "type": "string",
                                                     "example": "Massachusetts Institute of Technology"
                                                 },
-                                                "department": {
-                                                    "type": "string",
-                                                    "example": "Department of Computer Science and Artificial Intelligence",
-                                                    "nullable": true
-                                                },
-                                                "position": {
-                                                    "type": "string",
-                                                    "example": "Associate Professor",
-                                                    "nullable": true
-                                                },
                                                 "account_status": {
                                                     "description": "Account requires email verification",
                                                     "type": "string",
                                                     "example": "pending"
-                                                },
-                                                "created_at": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2025-08-06T15:30:00Z"
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "next_steps": {
-                                            "description": "Instructions for completing registration",
-                                            "properties": {
-                                                "verify_email": {
-                                                    "type": "string",
-                                                    "example": "Check your email inbox for a verification link"
-                                                },
-                                                "email_expires": {
-                                                    "type": "string",
-                                                    "example": "Verification link expires in 24 hours"
-                                                },
-                                                "resend_option": {
-                                                    "type": "string",
-                                                    "example": "Use /api/v1/auth/resend-verification to resend if needed"
                                                 }
                                             },
                                             "type": "object"
@@ -2617,9 +2576,13 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Login successful. Welcome back!"
+                                            "example": "Login successful"
                                         },
                                         "access_token": {
                                             "description": "Bearer token for API authentication",
@@ -2632,46 +2595,48 @@
                                             "example": "Bearer"
                                         },
                                         "expires_in": {
-                                            "description": "Token expiration time in seconds (48 hours default)",
+                                            "description": "Token expiration time in minutes (4 months)",
                                             "type": "integer",
                                             "example": 172800
                                         },
                                         "user": {
-                                            "$ref": "#/components/schemas/User"
-                                        },
-                                        "permissions": {
-                                            "description": "User's platform permissions",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "create_events",
-                                                "manage_resources",
-                                                "moderate_forums"
-                                            ]
-                                        },
-                                        "session_info": {
-                                            "description": "Session metadata",
+                                            "description": "Authenticated user profile",
                                             "properties": {
-                                                "login_time": {
+                                                "uuid": {
                                                     "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2025-08-06T15:30:00Z"
+                                                    "format": "uuid",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
                                                 },
-                                                "ip_address": {
+                                                "name": {
                                                     "type": "string",
-                                                    "example": "192.168.1.100"
+                                                    "example": "Dr. Sarah Johnson"
                                                 },
-                                                "user_agent": {
+                                                "email": {
                                                     "type": "string",
-                                                    "example": "Mozilla/5.0..."
+                                                    "format": "email",
+                                                    "example": "sarah.johnson@university.edu"
                                                 },
-                                                "last_login": {
+                                                "institution": {
                                                     "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2025-08-05T10:20:00Z",
+                                                    "example": "Massachusetts Institute of Technology"
+                                                },
+                                                "department": {
+                                                    "type": "string",
+                                                    "example": "Computer Science",
                                                     "nullable": true
+                                                },
+                                                "position": {
+                                                    "type": "string",
+                                                    "example": "Associate Professor",
+                                                    "nullable": true
+                                                },
+                                                "account_status": {
+                                                    "type": "string",
+                                                    "example": "active"
+                                                },
+                                                "is_admin": {
+                                                    "type": "boolean",
+                                                    "example": false
                                                 }
                                             },
                                             "type": "object"
@@ -2961,40 +2926,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Logged out successfully. Thank you for using Academia World!"
-                                        },
-                                        "session_info": {
-                                            "description": "Session termination details",
-                                            "properties": {
-                                                "logout_time": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2025-08-06T16:45:00Z"
-                                                },
-                                                "tokens_invalidated": {
-                                                    "description": "Number of tokens invalidated",
-                                                    "type": "integer",
-                                                    "example": 3
-                                                },
-                                                "session_id": {
-                                                    "description": "Session identifier for audit trails",
-                                                    "type": "string",
-                                                    "example": "sess_abc123"
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "next_steps": {
-                                            "description": "Information about post-logout state",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Your session has been completely terminated",
-                                                "You'll need to login again to access your account",
-                                                "All device sessions remain active unless logged out individually"
-                                            ]
+                                            "example": "Logged out successfully"
                                         }
                                     },
                                     "type": "object"
@@ -3008,24 +2940,13 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "User not authenticated. Session may have already expired."
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "NOT_AUTHENTICATED"
-                                        },
-                                        "suggestions": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Your session may have already expired",
-                                                "No action required if you're already logged out",
-                                                "Use the login endpoint to start a new session"
-                                            ]
+                                            "example": "User not authenticated"
                                         }
                                     },
                                     "type": "object"
@@ -3080,6 +3001,10 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
                                         "message": {
                                             "type": "string",
                                             "example": "Token refreshed successfully"
@@ -3098,7 +3023,45 @@
                                             "example": 172800
                                         },
                                         "user": {
-                                            "$ref": "#/components/schemas/User"
+                                            "properties": {
+                                                "uuid": {
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Dr. Sarah Johnson"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email",
+                                                    "example": "sarah.johnson@university.edu"
+                                                },
+                                                "institution": {
+                                                    "type": "string",
+                                                    "example": "Massachusetts Institute of Technology"
+                                                },
+                                                "department": {
+                                                    "type": "string",
+                                                    "example": "Computer Science",
+                                                    "nullable": true
+                                                },
+                                                "position": {
+                                                    "type": "string",
+                                                    "example": "Associate Professor",
+                                                    "nullable": true
+                                                },
+                                                "account_status": {
+                                                    "type": "string",
+                                                    "example": "active"
+                                                },
+                                                "is_admin": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -3359,7 +3322,7 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Email verified successfully. You are now logged in. Welcome to Academia World!"
+                                            "example": "Email verified successfully. You are now logged in."
                                         },
                                         "access_token": {
                                             "description": "Long-term Bearer token for API authentication (4 months validity)",
@@ -3416,33 +3379,6 @@
                                                 }
                                             },
                                             "type": "object"
-                                        },
-                                        "account_benefits": {
-                                            "description": "Platform features now available to verified user",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Full access to academic events",
-                                                "Ability to create and manage resources",
-                                                "Participate in discussion forums",
-                                                "Connect with other academics",
-                                                "Access to premium features"
-                                            ]
-                                        },
-                                        "next_steps": {
-                                            "description": "Suggested actions for new verified users",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Complete your profile",
-                                                "Explore upcoming academic events",
-                                                "Join relevant discussion forums",
-                                                "Upload your first academic resource"
-                                            ]
                                         }
                                     },
                                     "type": "object"
@@ -3603,60 +3539,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Verification email sent successfully. Please check your inbox and spam folder."
-                                        },
-                                        "email_info": {
-                                            "description": "Information about the verification email",
-                                            "properties": {
-                                                "sent_to": {
-                                                    "type": "string",
-                                                    "example": "sarah.johnson@university.edu"
-                                                },
-                                                "expires_in": {
-                                                    "type": "string",
-                                                    "example": "24 hours"
-                                                },
-                                                "from_sender": {
-                                                    "type": "string",
-                                                    "example": "noreply@academiaworld.com"
-                                                },
-                                                "subject_line": {
-                                                    "type": "string",
-                                                    "example": "Verify Your Academia World Account"
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "instructions": {
-                                            "description": "Steps to complete email verification",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Check your email inbox and spam folder",
-                                                "Click the verification link in the email",
-                                                "You'll be automatically logged in after verification",
-                                                "Contact support if you don't receive the email within 10 minutes"
-                                            ]
-                                        },
-                                        "troubleshooting": {
-                                            "description": "Common issues and solutions",
-                                            "properties": {
-                                                "not_received": {
-                                                    "type": "string",
-                                                    "example": "Check spam folder, wait up to 10 minutes for delivery"
-                                                },
-                                                "link_expired": {
-                                                    "type": "string",
-                                                    "example": "Use this endpoint to request a new verification email"
-                                                },
-                                                "support_email": {
-                                                    "type": "string",
-                                                    "example": "support@academiaworld.com"
-                                                }
-                                            },
-                                            "type": "object"
+                                            "example": "Verification email sent successfully. Please check your inbox."
                                         }
                                     },
                                     "type": "object"
@@ -3665,7 +3548,7 @@
                         }
                     },
                     "400": {
-                        "description": "Email already verified or cannot resend verification",
+                        "description": "Email already verified",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3673,27 +3556,6 @@
                                         "message": {
                                             "type": "string",
                                             "example": "Email is already verified"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "EMAIL_ALREADY_VERIFIED"
-                                        },
-                                        "next_steps": {
-                                            "description": "What to do when email is already verified",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Your account is already verified",
-                                                "You can login normally using your credentials",
-                                                "Visit the login page to access your account"
-                                            ]
-                                        },
-                                        "login_url": {
-                                            "description": "Login endpoint for verified users",
-                                            "type": "string",
-                                            "example": "/api/v1/auth/login"
                                         }
                                     },
                                     "type": "object"
@@ -3702,42 +3564,14 @@
                         }
                     },
                     "404": {
-                        "description": "User account not found",
+                        "description": "User not found",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "User not found with this email address"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "USER_NOT_FOUND"
-                                        },
-                                        "possible_reasons": {
-                                            "description": "Why user might not be found",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Email address is not registered",
-                                                "Typo in email address",
-                                                "Account may have been deleted"
-                                            ]
-                                        },
-                                        "suggestions": {
-                                            "description": "How to resolve the issue",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Double-check the email address spelling",
-                                                "Use the registration endpoint to create a new account",
-                                                "Contact support if you believe this is an error"
-                                            ]
+                                            "example": "User not found"
                                         }
                                     },
                                     "type": "object"
@@ -3746,7 +3580,7 @@
                         }
                     },
                     "422": {
-                        "description": "Validation errors in email format",
+                        "description": "Validation errors",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3756,18 +3590,6 @@
                                             "example": "Validation errors"
                                         },
                                         "errors": {
-                                            "properties": {
-                                                "email": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    },
-                                                    "example": [
-                                                        "The email field is required.",
-                                                        "The email must be a valid email address."
-                                                    ]
-                                                }
-                                            },
                                             "type": "object"
                                         }
                                     },
@@ -3776,48 +3598,15 @@
                             }
                         }
                     },
-                    "429": {
-                        "description": "Rate limit exceeded for verification email requests",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Too many verification email requests. Please wait before requesting another."
-                                        },
-                                        "retry_after": {
-                                            "description": "Seconds until next request allowed",
-                                            "type": "integer",
-                                            "example": 300
-                                        },
-                                        "limit_info": {
-                                            "type": "string",
-                                            "example": "Maximum 3 verification emails per hour per email address"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
                     "500": {
-                        "description": "Internal server error during email sending",
+                        "description": "Failed to send verification email",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Failed to send verification email. Please try again later."
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "EMAIL_SEND_FAILED"
-                                        },
-                                        "support_note": {
-                                            "type": "string",
-                                            "example": "If this error persists, please contact support@academiaworld.com"
+                                            "example": "Failed to send verification email"
                                         }
                                     },
                                     "type": "object"
@@ -3983,68 +3772,6 @@
                                         },
                                         "pagination": {
                                             "$ref": "#/components/schemas/PaginationMeta"
-                                        },
-                                        "filters_applied": {
-                                            "description": "Summary of active filters",
-                                            "properties": {
-                                                "search_term": {
-                                                    "type": "string",
-                                                    "example": "machine learning",
-                                                    "nullable": true
-                                                },
-                                                "location_type": {
-                                                    "type": "string",
-                                                    "example": "hybrid",
-                                                    "nullable": true
-                                                },
-                                                "date_range": {
-                                                    "properties": {
-                                                        "from": {
-                                                            "type": "string",
-                                                            "example": "2025-08-15"
-                                                        },
-                                                        "to": {
-                                                            "type": "string",
-                                                            "example": "2025-12-31"
-                                                        }
-                                                    },
-                                                    "type": "object",
-                                                    "nullable": true
-                                                },
-                                                "results_count": {
-                                                    "type": "integer",
-                                                    "example": 42
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "suggestions": {
-                                            "description": "Helpful suggestions for users",
-                                            "properties": {
-                                                "popular_searches": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    },
-                                                    "example": [
-                                                        "artificial intelligence",
-                                                        "climate research",
-                                                        "digital humanities"
-                                                    ]
-                                                },
-                                                "upcoming_categories": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string"
-                                                    },
-                                                    "example": [
-                                                        "Computer Science",
-                                                        "Environmental Studies",
-                                                        "Medical Research"
-                                                    ]
-                                                }
-                                            },
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -4242,64 +3969,10 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Event created and published successfully. Your event is now live and accepting registrations!"
+                                            "example": "Event created and published successfully!"
                                         },
                                         "data": {
                                             "$ref": "#/components/schemas/Event"
-                                        },
-                                        "event_status": {
-                                            "description": "Event publication and registration status",
-                                            "properties": {
-                                                "is_published": {
-                                                    "type": "boolean",
-                                                    "example": true
-                                                },
-                                                "registration_open": {
-                                                    "type": "boolean",
-                                                    "example": true
-                                                },
-                                                "event_url": {
-                                                    "type": "string",
-                                                    "example": "https://academiaworld.com/events/550e8400-e29b-41d4-a716-446655440000"
-                                                },
-                                                "admin_notified": {
-                                                    "description": "Whether platform administrators were notified",
-                                                    "type": "boolean",
-                                                    "example": true
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "next_steps": {
-                                            "description": "Suggested actions for event organizers",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Share your event link with potential attendees",
-                                                "Monitor registrations through your dashboard",
-                                                "Prepare event materials and presentations",
-                                                "Set up reminder notifications for registered attendees"
-                                            ]
-                                        },
-                                        "organizer_tools": {
-                                            "description": "Available tools for event management",
-                                            "properties": {
-                                                "edit_event": {
-                                                    "type": "string",
-                                                    "example": "/api/v1/events/{uuid}"
-                                                },
-                                                "view_registrations": {
-                                                    "type": "string",
-                                                    "example": "/api/v1/events/{uuid}/registrations"
-                                                },
-                                                "send_updates": {
-                                                    "type": "string",
-                                                    "example": "/api/v1/events/{uuid}/announcements"
-                                                }
-                                            },
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -4647,7 +4320,7 @@
                         }
                     },
                     "404": {
-                        "description": "Event not found or not accessible to the current user",
+                        "description": "Event not found or not accessible",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4655,33 +4328,6 @@
                                         "message": {
                                             "type": "string",
                                             "example": "Event not found or not accessible"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "EVENT_NOT_FOUND"
-                                        },
-                                        "possible_reasons": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Event UUID does not exist",
-                                                "Event is not published yet",
-                                                "Event is private and you're not invited",
-                                                "Event has been cancelled or banned"
-                                            ]
-                                        },
-                                        "suggestions": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Check the event UUID for typos",
-                                                "Contact the event organizer if you believe you should have access",
-                                                "Browse other available events in our catalog"
-                                            ]
                                         }
                                     },
                                     "type": "object"
@@ -4690,31 +4336,17 @@
                         }
                     },
                     "403": {
-                        "description": "Access forbidden - event is private or restricted",
+                        "description": "Access forbidden",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "This event is private and requires an invitation"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "EVENT_ACCESS_RESTRICTED"
-                                        },
-                                        "contact_organizer": {
-                                            "type": "string",
-                                            "example": "To request access, contact the event organizer"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
                     },
                     "500": {
-                        "description": "Internal server error while retrieving event details",
+                        "description": "Internal server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4995,114 +4627,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Successfully registered for 'AI in Healthcare Conference'! Confirmation email sent."
-                                        },
-                                        "data": {
-                                            "description": "Registration confirmation details",
-                                            "properties": {
-                                                "registration_uuid": {
-                                                    "description": "Unique registration identifier",
-                                                    "type": "string",
-                                                    "format": "uuid",
-                                                    "example": "abc12345-e29b-41d4-a716-446655440999"
-                                                },
-                                                "event_uuid": {
-                                                    "type": "string",
-                                                    "format": "uuid",
-                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                                                },
-                                                "user_uuid": {
-                                                    "type": "string",
-                                                    "format": "uuid",
-                                                    "example": "660f9400-e29b-41d4-a716-446655440001"
-                                                },
-                                                "status": {
-                                                    "description": "Registration status",
-                                                    "type": "string",
-                                                    "example": "registered"
-                                                },
-                                                "notes": {
-                                                    "type": "string",
-                                                    "example": "Looking forward to the AI sessions!",
-                                                    "nullable": true
-                                                },
-                                                "registered_at": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2025-08-06T16:30:00Z"
-                                                },
-                                                "registration_number": {
-                                                    "description": "Human-readable registration number",
-                                                    "type": "string",
-                                                    "example": "AI2025-0042"
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "event_info": {
-                                            "description": "Relevant event information for the registrant",
-                                            "properties": {
-                                                "title": {
-                                                    "type": "string",
-                                                    "example": "AI in Healthcare Conference"
-                                                },
-                                                "start_date": {
-                                                    "type": "string",
-                                                    "format": "date-time",
-                                                    "example": "2025-10-15T09:00:00Z"
-                                                },
-                                                "location": {
-                                                    "type": "string",
-                                                    "example": "Stanford Medical Center"
-                                                },
-                                                "total_registered": {
-                                                    "description": "Total registrations after this one",
-                                                    "type": "integer",
-                                                    "example": 48
-                                                },
-                                                "spots_remaining": {
-                                                    "type": "integer",
-                                                    "example": 152,
-                                                    "nullable": true
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "next_steps": {
-                                            "description": "Recommended actions after registration",
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Check your email for confirmation details",
-                                                "Add the event to your calendar",
-                                                "Join the event discussion forum",
-                                                "Download pre-event materials when available",
-                                                "Contact organizer with any questions"
-                                            ]
-                                        },
-                                        "important_info": {
-                                            "description": "Important information for attendees",
-                                            "properties": {
-                                                "check_in_time": {
-                                                    "type": "string",
-                                                    "example": "Please arrive 30 minutes early for check-in"
-                                                },
-                                                "what_to_bring": {
-                                                    "type": "string",
-                                                    "example": "Laptop, notebook, business cards"
-                                                },
-                                                "parking_info": {
-                                                    "type": "string",
-                                                    "example": "Free parking available in Lot B"
-                                                },
-                                                "cancellation_policy": {
-                                                    "type": "string",
-                                                    "example": "Free cancellation up to 48 hours before the event"
-                                                }
-                                            },
-                                            "type": "object"
+                                            "example": "Successfully registered for the event!"
                                         }
                                     },
                                     "type": "object"
@@ -5118,54 +4643,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Registration failed: Event has reached capacity"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "EVENT_FULL"
-                                        },
-                                        "failure_reasons": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Event has reached maximum capacity",
-                                                "Registration deadline has passed",
-                                                "Event is not published",
-                                                "You are already registered",
-                                                "Event hosts cannot register for their own events"
-                                            ]
-                                        },
-                                        "suggestions": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Join the waitlist if available",
-                                                "Look for similar upcoming events",
-                                                "Contact the organizer about potential additional spots",
-                                                "Set up an alert for future events by this organizer"
-                                            ]
-                                        },
-                                        "alternative_actions": {
-                                            "description": "Alternative actions user can take",
-                                            "properties": {
-                                                "waitlist_available": {
-                                                    "type": "boolean",
-                                                    "example": true
-                                                },
-                                                "similar_events": {
-                                                    "type": "string",
-                                                    "example": "/api/v1/events?search=AI%20healthcare"
-                                                },
-                                                "contact_organizer": {
-                                                    "type": "string",
-                                                    "example": "conference@stanford.edu"
-                                                }
-                                            },
-                                            "type": "object"
+                                            "example": "Event is not available for registration"
                                         }
                                     },
                                     "type": "object"
@@ -5178,21 +4656,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "You must be logged in to register for events"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "AUTHENTICATION_REQUIRED"
-                                        },
-                                        "login_url": {
-                                            "type": "string",
-                                            "example": "/api/v1/auth/login"
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -5202,28 +4666,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Your account does not have permission to register for events"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "INSUFFICIENT_PERMISSIONS"
-                                        },
-                                        "required_conditions": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Email verification required",
-                                                "Active account status",
-                                                "Institution affiliation verified"
-                                            ]
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -5524,7 +4967,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/EventRegistration"
+                                                "$ref": "#/components/schemas/Event"
                                             }
                                         },
                                         "pagination": {
@@ -5677,7 +5120,34 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/User"
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "first_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "full_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "email": {
+                                                        "type": "string",
+                                                        "format": "email"
+                                                    },
+                                                    "institution": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "position": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
                                             }
                                         },
                                         "total_count": {
@@ -6100,6 +5570,9 @@
                                                             "technical"
                                                         ]
                                                     },
+                                                    "is_moderated": {
+                                                        "type": "boolean"
+                                                    },
                                                     "post_count": {
                                                         "type": "integer"
                                                     },
@@ -6120,10 +5593,25 @@
                                                                 "type": "string"
                                                             }
                                                         },
-                                                        "type": "object"
+                                                        "type": "object",
+                                                        "nullable": true
                                                     },
                                                     "latest_post": {
-                                                        "type": "object"
+                                                        "properties": {
+                                                            "user": {
+                                                                "type": "string"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "datetime"
+                                                            }
+                                                        },
+                                                        "type": "object",
+                                                        "nullable": true
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "datetime"
                                                     }
                                                 },
                                                 "type": "object"
@@ -6641,17 +6129,24 @@
                                                     "content": {
                                                         "type": "string"
                                                     },
-                                                    "is_pinned": {
-                                                        "type": "boolean"
-                                                    },
-                                                    "is_solution": {
-                                                        "type": "boolean"
-                                                    },
                                                     "likes_count": {
                                                         "type": "integer"
                                                     },
                                                     "replies_count": {
                                                         "type": "integer"
+                                                    },
+                                                    "edited_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "nullable": true
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
                                                     },
                                                     "user": {
                                                         "properties": {
@@ -6663,11 +6158,40 @@
                                                                 "type": "string"
                                                             }
                                                         },
-                                                        "type": "object"
+                                                        "type": "object",
+                                                        "nullable": true
                                                     },
-                                                    "created_at": {
-                                                        "type": "string",
-                                                        "format": "date-time"
+                                                    "replies": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "properties": {
+                                                                "uuid": {
+                                                                    "type": "string",
+                                                                    "format": "uuid"
+                                                                },
+                                                                "content": {
+                                                                    "type": "string"
+                                                                },
+                                                                "created_at": {
+                                                                    "type": "string",
+                                                                    "format": "date-time"
+                                                                },
+                                                                "user": {
+                                                                    "properties": {
+                                                                        "uuid": {
+                                                                            "type": "string",
+                                                                            "format": "uuid"
+                                                                        },
+                                                                        "name": {
+                                                                            "type": "string"
+                                                                        }
+                                                                    },
+                                                                    "type": "object",
+                                                                    "nullable": true
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
                                                     }
                                                 },
                                                 "type": "object"
@@ -7579,7 +7103,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Academic resources retrieved successfully with access control applied",
+                        "description": "Event resources retrieved successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -7592,83 +7116,59 @@
                                             "description": "Array of accessible event resources",
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/EventResource"
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string",
+                                                        "format": "uuid"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "original_filename": {
+                                                        "type": "string"
+                                                    },
+                                                    "file_type": {
+                                                        "type": "string"
+                                                    },
+                                                    "file_size": {
+                                                        "type": "integer"
+                                                    },
+                                                    "file_size_formatted": {
+                                                        "type": "string"
+                                                    },
+                                                    "file_url": {
+                                                        "type": "string"
+                                                    },
+                                                    "resource_type": {
+                                                        "type": "string"
+                                                    },
+                                                    "is_public": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "is_downloadable": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "download_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "view_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "uploaded_by": {
+                                                        "type": "object",
+                                                        "nullable": true
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
                                             }
-                                        },
-                                        "access_info": {
-                                            "description": "Information about user's access level",
-                                            "properties": {
-                                                "user_role": {
-                                                    "type": "string",
-                                                    "enum": [
-                                                        "guest",
-                                                        "registered_attendee",
-                                                        "event_host",
-                                                        "admin"
-                                                    ],
-                                                    "example": "registered_attendee"
-                                                },
-                                                "can_upload": {
-                                                    "description": "Whether user can upload resources",
-                                                    "type": "boolean",
-                                                    "example": false
-                                                },
-                                                "total_accessible": {
-                                                    "description": "Total resources user can access",
-                                                    "type": "integer",
-                                                    "example": 8
-                                                },
-                                                "total_public": {
-                                                    "description": "Public resources available to all",
-                                                    "type": "integer",
-                                                    "example": 5
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "resource_summary": {
-                                            "description": "Summary of available resource types",
-                                            "properties": {
-                                                "presentations": {
-                                                    "type": "integer",
-                                                    "example": 3
-                                                },
-                                                "papers": {
-                                                    "type": "integer",
-                                                    "example": 2
-                                                },
-                                                "recordings": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "datasets": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "other": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "helpful_links": {
-                                            "description": "Related endpoints for resource management",
-                                            "properties": {
-                                                "upload_resource": {
-                                                    "type": "string",
-                                                    "example": "/api/v1/events/550e8400-e29b-41d4-a716-446655440000/resources"
-                                                },
-                                                "event_details": {
-                                                    "type": "string",
-                                                    "example": "/api/v1/events/550e8400-e29b-41d4-a716-446655440000"
-                                                },
-                                                "discussion_forums": {
-                                                    "type": "string",
-                                                    "example": "/api/v1/events/550e8400-e29b-41d4-a716-446655440000/forums"
-                                                }
-                                            },
-                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -7677,80 +7177,27 @@
                         }
                     },
                     "403": {
-                        "description": "Access denied - insufficient permissions to view event resources",
+                        "description": "Access denied - insufficient permissions",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "You don't have permission to view resources for this event"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "INSUFFICIENT_ACCESS"
-                                        },
-                                        "access_requirements": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Event registration required",
-                                                "Event must be published",
-                                                "Account verification needed"
-                                            ]
-                                        },
-                                        "suggestions": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Register for the event to access private resources",
-                                                "View only public resources by adding ?public_only=true",
-                                                "Contact the event organizer for special access"
-                                            ]
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
                     },
                     "404": {
-                        "description": "Event not found or not accessible",
+                        "description": "Event not found",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Event not found"
-                                        },
-                                        "error_code": {
-                                            "type": "string",
-                                            "example": "EVENT_NOT_FOUND"
-                                        },
-                                        "possible_reasons": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "string"
-                                            },
-                                            "example": [
-                                                "Event UUID does not exist",
-                                                "Event has been deleted",
-                                                "Event is private and you don't have access"
-                                            ]
-                                        }
-                                    },
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
                     },
                     "500": {
-                        "description": "Internal server error while retrieving resources",
+                        "description": "Internal server error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -8625,6 +8072,9 @@
                                                 "last_name": {
                                                     "type": "string"
                                                 },
+                                                "full_name": {
+                                                    "type": "string"
+                                                },
                                                 "email": {
                                                     "type": "string"
                                                 },
@@ -8632,34 +8082,62 @@
                                                     "type": "string"
                                                 },
                                                 "department": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "position": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "bio": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "website": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "phone": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "avatar": {
-                                                    "type": "string"
+                                                    "type": "string",
+                                                    "nullable": true
                                                 },
                                                 "social_links": {
-                                                    "type": "object"
+                                                    "type": "object",
+                                                    "nullable": true
                                                 },
                                                 "account_status": {
                                                     "type": "string"
+                                                },
+                                                "is_admin": {
+                                                    "type": "boolean"
                                                 },
                                                 "hosted_events_count": {
                                                     "type": "integer"
                                                 },
                                                 "registered_events_count": {
                                                     "type": "integer"
+                                                },
+                                                "email_verified_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "last_login_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
                                                 }
                                             },
                                             "type": "object"
