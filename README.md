@@ -11,12 +11,10 @@ A comprehensive academic event management and collaboration platform built with 
 
 Academia World is a platform that empowers academic institutions, researchers, and educators to:
 
-- **Event Management**: Create, manage, and participate in academic conferences, workshops, and seminars with poster upload
-- **Academic Networking**: Connect with fellow researchers and build professional relationships
-- **Resource Sharing**: Upload, share, and access academic resources and materials with direct download links
-- **Discussion Forums**: Engage in academic discourse through structured discussion forums
-- **User Management**: Comprehensive user profiles with institutional affiliations and academic credentials
 
+## 📸 Screenshots
+![Academia World Dashboard](screenshots/dashboard.png)
+![Event Creation Form](screenshots/event-form.png)
 ## 🏗️ Architecture
 
 ### Technology Stack
